@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Love Waveform Audio Player - Simplified</title>
+    <title>Love Waveform Audio Player - No Scroll</title>
     <script src="https://unpkg.com/wavesurfer.js@7"></script>
     <style>
         body {
@@ -116,6 +116,28 @@
             background: linear-gradient(#FF69B4, #FF1493) !important;
             box-shadow: 0 0 80px #FF69B4;
         }
+
+        #progress-container {
+            width: 92%;
+            height: 8px;
+            background: rgba(255,255,255,0.4);
+            margin: 15px 0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(to right, #FFB6C1, #FF1493);
+            transition: width 0.2s;
+        }
+
+        #loading-progress {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -127,6 +149,10 @@
             <span class="small-heart">💞</span>
         </div>
         <p>Memuat & memproses audio...</p>
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div id="loading-progress">0%</div>
     </div>
 
     <div id="tutorial">
@@ -135,6 +161,9 @@
     </div>
 
     <div id="waveform"></div>
+    <div id="progress-container">
+        <div id="progress-bar"></div>
+    </div>
 
     <div id="controls">
         <button id="play-pause">Putar 💖</button>
@@ -154,11 +183,13 @@
         const playPauseBtn = document.getElementById('play-pause');
         const startBtn = document.getElementById('start-btn');
         const fileInput = document.getElementById('file-input');
+        const progressBar = document.getElementById('progress-bar');
+        const loadingProgress = document.getElementById('loading-progress');
         const body = document.body;
 
         let wavesurfer;
-        let hasInteracted = false;
-        let audioSrc = 'sound1.mp3'; // <-- UBAH DI SINI jadi nama file audio default kamu
+        let audioSrc = 'sound1.mp3'; // <-- GANTI dengan file audio default kamu
+        let wakeLock = null;
 
         async function init(src) {
             try {
@@ -179,12 +210,18 @@
                     backend: 'MediaElement'
                 });
 
+                wavesurfer.on('loading', (percent) => {
+                    const p = Math.round(percent);
+                    progressBar.style.width = p + '%';
+                    loadingProgress.textContent = p + '%';
+                });
+
                 await wavesurfer.load(src);
 
                 loading.style.display = 'none';
                 waveformContainer.style.display = 'block';
                 tutorial.style.display = 'block';
-                body.style.overflowY = 'hidden'; // tetap no scroll
+                // Tidak mengubah overflowY menjadi 'auto' → tetap hidden (no scroll)
 
                 wavesurfer.on('play', () => {
                     playPauseBtn.textContent = 'Pause 💔';
@@ -193,6 +230,10 @@
                 wavesurfer.on('pause', () => {
                     playPauseBtn.textContent = 'Putar 💖';
                     body.classList.remove('glow-pink');
+                });
+                wavesurfer.on('audioprocess', () => {
+                    const prog = wavesurfer.getCurrentTime() / wavesurfer.getDuration() * 100;
+                    progressBar.style.width = prog + '%';
                 });
                 wavesurfer.on('finish', () => wavesurfer.stop());
 
@@ -209,15 +250,48 @@
             }
         }
 
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock telah dilepas');
+                    });
+                    console.log('Wake Lock aktif: Layar akan tetap menyala');
+                } catch (err) {
+                    console.error(`Gagal mengaktifkan Wake Lock: ${err.name}, ${err.message}`);
+                }
+            } else {
+                console.warn('Wake Lock API tidak didukung di browser ini');
+            }
+        }
+
+        async function releaseWakeLock() {
+            if (wakeLock !== null) {
+                try {
+                    await wakeLock.release();
+                    wakeLock = null;
+                    console.log('Wake Lock dilepas');
+                } catch (err) {
+                    console.error(`Gagal melepaskan Wake Lock: ${err.name}, ${err.message}`);
+                }
+            }
+        }
+
         playPauseBtn.addEventListener('click', () => {
-            if (wavesurfer.isPlaying()) wavesurfer.pause();
-            else wavesurfer.play().catch(()=>{});
+            if (wavesurfer.isPlaying()) {
+                wavesurfer.pause();
+                releaseWakeLock(); // Lepas wake lock saat pause
+            } else {
+                wavesurfer.play().catch(()=>{});
+                requestWakeLock(); // Aktifkan wake lock saat play
+            }
         });
 
         startBtn.addEventListener('click', () => {
-            hasInteracted = true;
             tutorial.style.display = 'none';
             wavesurfer.play().catch(()=>{});
+            requestWakeLock(); // Aktifkan wake lock saat tombol mulai ditekan
         });
 
         fileInput.addEventListener('change', (e) => {
@@ -229,10 +303,13 @@
             }
         });
 
-        // Hilangkan event scroll & touchmove sepenuhnya
-        // document.addEventListener('visibilitychange', ...) tetap biar pause saat tab minimize
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden && wavesurfer) wavesurfer.pause();
+            if (document.hidden && wavesurfer) {
+                wavesurfer.pause();
+                releaseWakeLock(); // Lepas wake lock saat tab/minimize
+            } else if (!document.hidden && wavesurfer && wavesurfer.isPlaying()) {
+                requestWakeLock(); // Re-aktifkan jika kembali dan masih playing
+            }
         });
 
         init(audioSrc);
