@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Love Waveform Audio Player - Simplified</title>
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(#FFB6C1, #FF69B4);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            transition: background 0.5s ease;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #loading {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 182, 193, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            font-size: 22px;
+            text-shadow: 0 0 10px #FF1493;
+        }
+
+        .heart-loader { font-size: 90px; animation: pulse 1.4s infinite; margin-bottom: 20px; }
+        @keyframes pulse { 0%,100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.4); opacity: 1; } }
+
+        .hearts-float { display: flex; gap: 25px; margin-bottom: 30px; }
+        .small-heart { font-size: 40px; animation: float 3.5s infinite ease-in-out; }
+        .small-heart:nth-child(1) { animation-delay: 0s; }
+        .small-heart:nth-child(2) { animation-delay: 0.6s; }
+        .small-heart:nth-child(3) { animation-delay: 1.2s; }
+        @keyframes float { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-50px) rotate(25deg); } }
+
+        #waveform {
+            width: 92%;
+            height: 220px;
+            margin: 25px 0;
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.25);
+            display: none;
+        }
+
+        #controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            margin-top: 25px;
+        }
+
+        #play-pause, #upload-btn {
+            background: #FF1493;
+            border: none;
+            color: white;
+            padding: 16px 35px;
+            border-radius: 60px;
+            font-size: 19px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 18px rgba(255,20,147,0.6);
+        }
+
+        #play-pause:hover, #upload-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 12px 25px rgba(255,20,147,0.8);
+        }
+
+        #file-input { display: none; }
+
+        #tutorial {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.96);
+            padding: 45px 60px;
+            border-radius: 35px;
+            z-index: 10;
+            text-align: center;
+            font-size: 21px;
+            color: #222;
+            max-width: 85%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+            display: none;
+        }
+
+        #tutorial button {
+            margin-top: 25px;
+            background: #FF69B4;
+            border: none;
+            color: white;
+            padding: 16px 40px;
+            border-radius: 60px;
+            font-size: 19px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #tutorial button:hover { background: #FF1493; }
+
+        .glow-pink {
+            background: linear-gradient(#FF69B4, #FF1493) !important;
+            box-shadow: 0 0 80px #FF69B4;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="heart-loader">💖</div>
+        <div class="hearts-float">
+            <span class="small-heart">❤️</span>
+            <span class="small-heart">💗</span>
+            <span class="small-heart">💞</span>
+        </div>
+        <p>Memuat & memproses audio...</p>
+    </div>
+
+    <div id="tutorial">
+        <p>Tekan tombol mulai di bawah untuk memutar lagu.<br>Waveform akan muncul setelah audio siap.</p>
+        <button id="start-btn">Mulai Pengalaman Cinta ❤️</button>
+    </div>
+
+    <div id="waveform"></div>
+
+    <div id="controls">
+        <button id="play-pause">Putar 💖</button>
+        <label for="file-input">
+            <button id="upload-btn">Pilih Lagu Lain 💕</button>
+        </label>
+        <input type="file" id="file-input" accept="audio/*">
+    </div>
+
+    <audio id="audio" preload="auto"></audio>
+
+    <script>
+        const audio = document.getElementById('audio');
+        const loading = document.getElementById('loading');
+        const tutorial = document.getElementById('tutorial');
+        const waveformContainer = document.getElementById('waveform');
+        const playPauseBtn = document.getElementById('play-pause');
+        const startBtn = document.getElementById('start-btn');
+        const fileInput = document.getElementById('file-input');
+        const body = document.body;
+
+        let wavesurfer;
+        let hasInteracted = false;
+        let audioSrc = 'sound1.mp3'; // <-- UBAH DI SINI jadi nama file audio default kamu
+
+        async function init(src) {
+            try {
+                loading.style.display = 'flex';
+                audio.src = src;
+                await audio.load();
+
+                wavesurfer = WaveSurfer.create({
+                    container: '#waveform',
+                    waveColor: '#FF69B4',
+                    progressColor: '#FFB6C1',
+                    cursorColor: '#fff',
+                    barWidth: 4,
+                    barRadius: 4,
+                    height: 220,
+                    responsive: true,
+                    normalize: true,
+                    backend: 'MediaElement'
+                });
+
+                await wavesurfer.load(src);
+
+                loading.style.display = 'none';
+                waveformContainer.style.display = 'block';
+                tutorial.style.display = 'block';
+                body.style.overflowY = 'hidden'; // tetap no scroll
+
+                wavesurfer.on('play', () => {
+                    playPauseBtn.textContent = 'Pause 💔';
+                    body.classList.add('glow-pink');
+                });
+                wavesurfer.on('pause', () => {
+                    playPauseBtn.textContent = 'Putar 💖';
+                    body.classList.remove('glow-pink');
+                });
+                wavesurfer.on('finish', () => wavesurfer.stop());
+
+            } catch (e) {
+                console.error(e);
+                loading.innerHTML = `
+                    <div class="heart-loader" style="color:#c00; animation:none;">❌</div>
+                    <p style="color:#c00; font-size:24px; margin-top:30px; text-align:center;">
+                        GAGAL MEMUAT AUDIO<br><br>
+                        Cek file "${src}" ada & valid.<br>
+                        <small>${e.message}</small>
+                    </p>
+                `;
+            }
+        }
+
+        playPauseBtn.addEventListener('click', () => {
+            if (wavesurfer.isPlaying()) wavesurfer.pause();
+            else wavesurfer.play().catch(()=>{});
+        });
+
+        startBtn.addEventListener('click', () => {
+            hasInteracted = true;
+            tutorial.style.display = 'none';
+            wavesurfer.play().catch(()=>{});
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                audioSrc = URL.createObjectURL(file);
+                if (wavesurfer) wavesurfer.destroy();
+                init(audioSrc);
+            }
+        });
+
+        // Hilangkan event scroll & touchmove sepenuhnya
+        // document.addEventListener('visibilitychange', ...) tetap biar pause saat tab minimize
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && wavesurfer) wavesurfer.pause();
+        });
+
+        init(audioSrc);
+    </script>
+</body>
+</html>
