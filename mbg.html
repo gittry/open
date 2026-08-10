@@ -210,7 +210,7 @@
     display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
   }
   .overlay.active{display:flex;}
-  .modal{background:#fff; border-radius:6px; padding:26px; width:100%; max-width:380px; border-top:4px solid var(--copper);}
+  .modal{background:#fff; border-radius:6px; padding:26px; width:100%; max-width:400px; border-top:4px solid var(--copper); max-height: 90vh; overflow-y: auto;}
   .modal h4{font-family:'Oswald',sans-serif; text-transform:uppercase; margin:0 0 4px; color:var(--navy);}
   .modal p{font-size:13px; color:var(--slate); margin:0 0 16px;}
   .modal-actions{display:flex; gap:10px; margin-top:18px;}
@@ -361,6 +361,39 @@
   </div>
 </div>
 
+<!-- ===================== MODAL EDIT PRODUK ===================== -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <h4>Edit Produk</h4>
+    <p>Perbarui informasi produk Anda di bawah ini.</p>
+    
+    <label for="e_nama">Nama Produk</label>
+    <input type="text" id="e_nama" required>
+
+    <label for="e_jenis">Jenis / Kategori</label>
+    <input type="text" id="e_jenis" required>
+
+    <div class="row-2">
+      <div>
+        <label for="e_harga">Harga (Rp)</label>
+        <input type="number" id="e_harga" min="0" required>
+      </div>
+      <div>
+        <label for="e_jumlah">Jumlah / Stok</label>
+        <input type="number" id="e_jumlah" min="0" required>
+      </div>
+    </div>
+
+    <label for="e_minpesan">Minimal Pesan</label>
+    <input type="number" id="e_minpesan" min="1" required>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="editCancelBtn" style="flex:1;">Batal</button>
+      <button class="btn btn-copper" id="editConfirmBtn" style="flex:1;">Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -386,14 +419,13 @@ const COMPANY_SHORT = "NG Supply";
 
 /* ======================= AKHIR KONFIGURASI ======================= */
 
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-// ✅ Ganti import ke Firebase Database (RTDB)
+// ✅ Ditambahkan: import update untuk memperbarui data
 import {
-  getDatabase, ref, push, remove, onValue, query as rtdbQuery, orderByChild, equalTo, serverTimestamp
+  getDatabase, ref, push, remove, update, onValue, query as rtdbQuery, orderByChild, equalTo, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 document.getElementById("companyNameEl").textContent = COMPANY_NAME;
@@ -403,7 +435,7 @@ document.getElementById("yearEl").textContent = new Date().getFullYear();
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db   = getDatabase(app); // ✅ Inisialisasi Realtime Database
+const db   = getDatabase(app); 
 
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ client_id: GOOGLE_CLIENT_ID, prompt: "select_account" });
@@ -453,7 +485,6 @@ onAuthStateChanged(auth, (user)=>{
     document.getElementById("supplierLocked").style.display = "block";
     document.getElementById("productForm").style.display = "none";
   }
-  // Setup listener untuk pesanan setelah status auth berubah
   setupMyOrdersListener();
 });
 
@@ -472,7 +503,6 @@ function formatRupiah(n){
   return "Rp " + Number(n||0).toLocaleString("id-ID");
 }
 
-// ✅ Sesuaikan formater waktu karena RTDB menghasilkan angka timestamp (ms)
 function formatDate(ts){
   if(!ts) return "-";
   return new Date(ts).toLocaleDateString("id-ID", { day:"2-digit", month:"short", year:"numeric" });
@@ -499,13 +529,12 @@ productForm.addEventListener("submit", async (e)=>{
   btn.disabled = true; btn.textContent = "Menyimpan...";
 
   try{
-    // ✅ Ganti addDoc menjadi push & ref
     await push(ref(db, "products"), {
       nama, jenis, harga, jumlah, minPesan,
       supplierUid: currentUser.uid,
       supplierName: currentUser.displayName || currentUser.email,
       supplierEmail: currentUser.email,
-      createdAt: serverTimestamp() // Menggunakan serverTimestamp dari RTDB
+      createdAt: serverTimestamp() 
     });
     productForm.reset();
     toast("Produk berhasil ditambahkan.");
@@ -517,7 +546,7 @@ productForm.addEventListener("submit", async (e)=>{
   }
 });
 
-// ✅ Listener Live menggunakan onValue dari RTDB
+// ✅ Listener Live menggunakan onValue dari RTDB (Realtime Update)
 onValue(ref(db, "products"), (snapshot)=>{
   allProducts = [];
   snapshot.forEach((childSnap) => {
@@ -548,6 +577,7 @@ function renderMyProducts(){
     wrap.innerHTML = `<div class="ledger-empty">Belum ada produk.</div>`;
     return;
   }
+  // ✅ Ditambahkan tombol Edit bersampingan dengan tombol Hapus
   wrap.innerHTML = mine.map(p=>`
     <div class="ledger-row">
       <span class="name" data-label="Produk">${escapeHtml(p.nama)}</span>
@@ -556,22 +586,94 @@ function renderMyProducts(){
       <span class="mono" data-label="Jumlah">${p.jumlah}</span>
       <span class="mono" data-label="Min. Pesan">${p.minPesan}</span>
       <span class="supplier" data-label="Ditambahkan">${formatDate(p.createdAt)}</span>
-      <span><button class="btn btn-danger" data-delete="${p.id}">Hapus</button></span>
+      <span style="display:flex; gap:6px;">
+        <button class="btn btn-ghost" style="font-size:12px; padding:6px 10px;" data-edit="${p.id}">Edit</button>
+        <button class="btn btn-danger" style="font-size:12px; padding:6px 10px;" data-delete="${p.id}">Hapus</button>
+      </span>
     </div>
   `).join("");
 }
 
+// Event handler untuk tombol Delete
 document.addEventListener("click", async (e)=>{
   const id = e.target.getAttribute && e.target.getAttribute("data-delete");
   if(id){
     if(!confirm("Hapus produk ini?")) return;
     try{
-      // ✅ Ganti deleteDoc dengan remove() dari RTDB
       await remove(ref(db, `products/${id}`));
       toast("Produk dihapus.");
     }catch(err){
       toast("Gagal menghapus: " + err.message);
     }
+  }
+});
+
+/* ---------------- EDIT PRODUK LOGIC ---------------- */
+let editTargetId = null;
+const editOverlay = document.getElementById("editOverlay");
+
+// Menangkap klik tombol Edit
+document.addEventListener("click", (e)=>{
+  const id = e.target.getAttribute && e.target.getAttribute("data-edit");
+  if(id){
+    const productToEdit = allProducts.find(p => p.id === id);
+    if(productToEdit) {
+      editTargetId = id;
+      // Isi formulir modal dengan data lama
+      document.getElementById("e_nama").value = productToEdit.nama;
+      document.getElementById("e_jenis").value = productToEdit.jenis;
+      document.getElementById("e_harga").value = productToEdit.harga;
+      document.getElementById("e_jumlah").value = productToEdit.jumlah;
+      document.getElementById("e_minpesan").value = productToEdit.minPesan;
+      
+      // Tampilkan modal
+      editOverlay.classList.add("active");
+    }
+  }
+});
+
+// Menutup modal Edit
+document.getElementById("editCancelBtn").addEventListener("click", ()=>{
+  editOverlay.classList.remove("active");
+  editTargetId = null;
+});
+
+// Menyimpan Perubahan Edit
+document.getElementById("editConfirmBtn").addEventListener("click", async ()=>{
+  if(!editTargetId) return;
+
+  const nama = document.getElementById("e_nama").value.trim();
+  const jenis = document.getElementById("e_jenis").value.trim();
+  const harga = Number(document.getElementById("e_harga").value);
+  const jumlah = Number(document.getElementById("e_jumlah").value);
+  const minPesan = Number(document.getElementById("e_minpesan").value);
+
+  if(!nama || !jenis || harga < 0 || jumlah < 0 || minPesan < 1){
+    toast("Semua bidang harus diisi dengan valid.");
+    return;
+  }
+
+  const btn = document.getElementById("editConfirmBtn");
+  btn.disabled = true; btn.textContent = "Menyimpan...";
+
+  try {
+    // ✅ Melakukan update data spesifik pada node produk yang dipilih
+    await update(ref(db, `products/${editTargetId}`), {
+      nama, 
+      jenis, 
+      harga, 
+      jumlah, 
+      minPesan,
+      updatedAt: serverTimestamp() // catat kapan terakhir diedit
+    });
+    
+    toast("Produk berhasil diperbarui.");
+    editOverlay.classList.remove("active");
+    editTargetId = null;
+  } catch (err) {
+    toast("Gagal memperbarui: " + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Simpan Perubahan";
   }
 });
 
@@ -651,7 +753,6 @@ document.getElementById("orderConfirmBtn").addEventListener("click", async ()=>{
     return;
   }
   try{
-    // ✅ Mengirim data pesanan ke RTDB
     await push(ref(db, "orders"), {
       productId: orderTargetProduct.id,
       productName: orderTargetProduct.nama,
@@ -662,7 +763,7 @@ document.getElementById("orderConfirmBtn").addEventListener("click", async ()=>{
       buyerEmail: currentUser.email,
       jumlahPesan: qty,
       status: "Menunggu Konfirmasi",
-      createdAt: serverTimestamp() // Menggunakan serverTimestamp dari RTDB
+      createdAt: serverTimestamp() 
     });
     toast("Pesanan berhasil dikirim.");
     overlay.classList.remove("active");
@@ -675,9 +776,8 @@ document.getElementById("orderConfirmBtn").addEventListener("click", async ()=>{
 /* ---------------- Orders: Pesanan Saya ---------------- */
 let unsubOrders = null;
 
-// ✅ Fungsi untuk setup listener yang dipanggil ketika status auth berubah
 function setupMyOrdersListener() {
-  if (unsubOrders) unsubOrders(); // Cabut listener sebelumnya jika ada
+  if (unsubOrders) unsubOrders(); 
   
   if(!currentUser){ 
     myOrders = []; 
@@ -685,7 +785,6 @@ function setupMyOrdersListener() {
     return; 
   }
   
-  // RTDB Query memfilter berdasarkan buyerUid
   const qMyOrders = rtdbQuery(ref(db, "orders"), orderByChild("buyerUid"), equalTo(currentUser.uid));
   
   unsubOrders = onValue(qMyOrders, (snapshot) => {
@@ -694,7 +793,6 @@ function setupMyOrdersListener() {
       myOrders.push({ id: childSnap.key, ...childSnap.val() });
     });
 
-    // Urutkan DESCENDING di sisi client berdasarkan createdAt
     myOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     
     renderMyOrders();
