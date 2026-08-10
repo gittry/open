@@ -237,11 +237,6 @@
 </head>
 <body>
 
-<!-- ===================================================================== -->
-<!--  KONFIGURASI FIREBASE & GOOGLE — lihat blok <script type="module">   -->
-<!--  di bagian paling atas <script> pada akhir file ini.                -->
-<!-- ===================================================================== -->
-
 <header class="topbar">
   <div class="brand">
     <div class="brand-mark">NG</div>
@@ -370,23 +365,11 @@
 
 <script type="module">
 /* =======================================================================
-   ⚙️  KONFIGURASI — ISI SEMUA NILAI DI BAWAH INI SEBELUM DIGUNAKAN
-   =======================================================================
-
-   1) FIREBASE CONFIG
-      Ambil dari: Firebase Console → Project Settings → General →
-      "Your apps" → SDK setup and configuration → Config
-
-   2) GOOGLE OAUTH CLIENT ID
-      Ambil dari: Google Cloud Console → APIs & Services → Credentials
-      → OAuth 2.0 Client IDs (Web client). Client ID ini HARUS sama dengan
-      Web client ID yang aktif di Firebase Console →
-      Authentication → Sign-in method → Google → Web SDK configuration.
-
-   3) NAMA PERUSAHAAN — sudah diisi sesuai permintaan, silakan ubah bila perlu.
+   ⚙️  KONFIGURASI 
    ======================================================================= */
 
 const firebaseConfig = {
+  const firebaseConfig = {
   apiKey: "AIzaSyDXXnEyXgnzZqrBiTOkW47kAuV7MyzQ4EM",
   authDomain: "nodemcu-91530.firebaseapp.com",
   databaseURL: "https://nodemcu-91530-default-rtdb.firebaseio.com",
@@ -409,10 +392,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+// ✅ Ganti import ke Firebase Database (RTDB)
 import {
-  getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot,
-  query, orderBy, where, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  getDatabase, ref, push, remove, onValue, query as rtdbQuery, orderByChild, equalTo, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 document.getElementById("companyNameEl").textContent = COMPANY_NAME;
 document.getElementById("companyShortEl").textContent = COMPANY_SHORT.toUpperCase() + " // TRADE PLATFORM";
@@ -421,11 +404,9 @@ document.getElementById("yearEl").textContent = new Date().getFullYear();
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db   = getFirestore(app);
+const db   = getDatabase(app); // ✅ Inisialisasi Realtime Database
 
 const provider = new GoogleAuthProvider();
-// Client ID Google ditautkan melalui konfigurasi provider Firebase Google Sign-In,
-// yang harus sama dengan GOOGLE_CLIENT_ID di atas (didaftarkan di Firebase Console).
 provider.setCustomParameters({ client_id: GOOGLE_CLIENT_ID, prompt: "select_account" });
 
 let currentUser = null;
@@ -473,7 +454,8 @@ onAuthStateChanged(auth, (user)=>{
     document.getElementById("supplierLocked").style.display = "block";
     document.getElementById("productForm").style.display = "none";
   }
-  renderMyOrders();
+  // Setup listener untuk pesanan setelah status auth berubah
+  setupMyOrdersListener();
 });
 
 /* ---------------- Tabs ---------------- */
@@ -490,14 +472,14 @@ document.querySelectorAll(".tab-stamp").forEach(btn=>{
 function formatRupiah(n){
   return "Rp " + Number(n||0).toLocaleString("id-ID");
 }
+
+// ✅ Sesuaikan formater waktu karena RTDB menghasilkan angka timestamp (ms)
 function formatDate(ts){
-  if(!ts || !ts.toDate) return "-";
-  return ts.toDate().toLocaleDateString("id-ID", { day:"2-digit", month:"short", year:"numeric" });
+  if(!ts) return "-";
+  return new Date(ts).toLocaleDateString("id-ID", { day:"2-digit", month:"short", year:"numeric" });
 }
 
-/* ---------------- Firestore: products ---------------- */
-const productsCol = collection(db, "products");
-
+/* ---------------- Realtime Database: Products ---------------- */
 const productForm = document.getElementById("productForm");
 productForm.addEventListener("submit", async (e)=>{
   e.preventDefault();
@@ -518,12 +500,13 @@ productForm.addEventListener("submit", async (e)=>{
   btn.disabled = true; btn.textContent = "Menyimpan...";
 
   try{
-    await addDoc(productsCol, {
+    // ✅ Ganti addDoc menjadi push & ref
+    await push(ref(db, "products"), {
       nama, jenis, harga, jumlah, minPesan,
       supplierUid: currentUser.uid,
       supplierName: currentUser.displayName || currentUser.email,
       supplierEmail: currentUser.email,
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp() // Menggunakan serverTimestamp dari RTDB
     });
     productForm.reset();
     toast("Produk berhasil ditambahkan.");
@@ -535,10 +518,16 @@ productForm.addEventListener("submit", async (e)=>{
   }
 });
 
-// Live listener: semua produk (dipakai untuk tab Pembeli + statistik)
-const qAllProducts = query(productsCol, orderBy("createdAt", "desc"));
-onSnapshot(qAllProducts, (snap)=>{
-  allProducts = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+// ✅ Listener Live menggunakan onValue dari RTDB
+onValue(ref(db, "products"), (snapshot)=>{
+  allProducts = [];
+  snapshot.forEach((childSnap) => {
+    allProducts.push({ id: childSnap.key, ...childSnap.val() });
+  });
+
+  // Urutkan DESCENDING di sisi client berdasarkan createdAt
+  allProducts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
   renderAllProducts();
   renderMyProducts();
   renderStats();
@@ -546,7 +535,7 @@ onSnapshot(qAllProducts, (snap)=>{
 }, (err)=>{
   console.error(err);
   document.getElementById("allProductsList").innerHTML =
-    `<div class="ledger-empty">Gagal memuat data. Periksa konfigurasi Firebase Anda.</div>`;
+    `<div class="ledger-empty">Gagal memuat data. Periksa konfigurasi Firebase RTDB Anda.</div>`;
 });
 
 function renderMyProducts(){
@@ -578,7 +567,8 @@ document.addEventListener("click", async (e)=>{
   if(id){
     if(!confirm("Hapus produk ini?")) return;
     try{
-      await deleteDoc(doc(db, "products", id));
+      // ✅ Ganti deleteDoc dengan remove() dari RTDB
+      await remove(ref(db, `products/${id}`));
       toast("Produk dihapus.");
     }catch(err){
       toast("Gagal menghapus: " + err.message);
@@ -662,7 +652,8 @@ document.getElementById("orderConfirmBtn").addEventListener("click", async ()=>{
     return;
   }
   try{
-    await addDoc(collection(db, "orders"), {
+    // ✅ Mengirim data pesanan ke RTDB
+    await push(ref(db, "orders"), {
       productId: orderTargetProduct.id,
       productName: orderTargetProduct.nama,
       supplierUid: orderTargetProduct.supplierUid,
@@ -672,7 +663,7 @@ document.getElementById("orderConfirmBtn").addEventListener("click", async ()=>{
       buyerEmail: currentUser.email,
       jumlahPesan: qty,
       status: "Menunggu Konfirmasi",
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp() // Menggunakan serverTimestamp dari RTDB
     });
     toast("Pesanan berhasil dikirim.");
     overlay.classList.remove("active");
@@ -682,18 +673,35 @@ document.getElementById("orderConfirmBtn").addEventListener("click", async ()=>{
   }
 });
 
-/* ---------------- Orders: pesanan saya ---------------- */
+/* ---------------- Orders: Pesanan Saya ---------------- */
 let unsubOrders = null;
-onAuthStateChanged(auth, (user)=>{
-  if(unsubOrders) unsubOrders();
-  if(!user){ myOrders = []; renderMyOrders(); return; }
-  const qMyOrders = query(collection(db,"orders"), where("buyerUid","==", user.uid), orderBy("createdAt","desc"));
-  unsubOrders = onSnapshot(qMyOrders, (snap)=>{
-    myOrders = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+
+// ✅ Fungsi untuk setup listener yang dipanggil ketika status auth berubah
+function setupMyOrdersListener() {
+  if (unsubOrders) unsubOrders(); // Cabut listener sebelumnya jika ada
+  
+  if(!currentUser){ 
+    myOrders = []; 
+    renderMyOrders(); 
+    return; 
+  }
+  
+  // RTDB Query memfilter berdasarkan buyerUid
+  const qMyOrders = rtdbQuery(ref(db, "orders"), orderByChild("buyerUid"), equalTo(currentUser.uid));
+  
+  unsubOrders = onValue(qMyOrders, (snapshot) => {
+    myOrders = [];
+    snapshot.forEach((childSnap) => {
+      myOrders.push({ id: childSnap.key, ...childSnap.val() });
+    });
+
+    // Urutkan DESCENDING di sisi client berdasarkan createdAt
+    myOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    
     renderMyOrders();
     document.getElementById("statOrders").textContent = myOrders.length;
   });
-});
+}
 
 function renderMyOrders(){
   const wrap = document.getElementById("myOrdersList");
