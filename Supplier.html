@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Supplier | NG Supply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Library jsPDF untuk Export PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+  :root{
+    --navy:#0B1E33;
+    --steel:#16324F;
+    --paper:#F2EEE4;
+    --paper-dim:#E7E1D2;
+    --copper:#C97C2C;
+    --copper-dark:#A5621E;
+    --slate:#4B5563;
+    --ink:#1B2430;
+    --line:#C9BFA6;
+    --ok:#3F6B4F;
+    --danger:#9C3B2E;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:'Inter',sans-serif;
+    background-image: linear-gradient(var(--paper-dim) 1px, transparent 1px), linear-gradient(90deg, var(--paper-dim) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.03em;}
+
+  header.topbar{
+    background:var(--navy); color:var(--paper); padding:16px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:3px solid var(--copper); position:sticky; top:0; z-index:50;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{
+    width:42px; height:42px; border:2px solid var(--copper); border-radius:4px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; color:var(--copper); transform:rotate(-2deg);
+  }
+  .brand-text .display{font-size:19px; font-weight:600; line-height:1.1; color:#fff;}
+  .brand-text .tag{font-size:11px; letter-spacing:.18em; color:var(--copper); font-family:'JetBrains Mono',monospace;}
+
+  .auth-area{display:flex; align-items:center; gap:12px;}
+  .btn{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:14px;
+    padding:10px 18px; border-radius:3px; border:1px solid transparent; cursor:pointer;
+    transition:transform .12s ease, background .12s ease;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-copper{background:var(--copper); color:#fff; border-color:var(--copper-dark);}
+  .btn-copper:hover{background:var(--copper-dark);}
+  .btn-outline{background:transparent; color:var(--paper); border-color:rgba(242,238,228,.4);}
+  .btn-outline:hover{border-color:var(--copper);}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--ink);}
+  .btn-ghost:hover{border-color:var(--copper); color:var(--copper-dark);}
+  .btn-danger{background:transparent; border:1px solid var(--danger); color:var(--danger); font-size:12px; padding:6px 10px;}
+  .btn-danger:hover{background:var(--danger); color:#fff;}
+  .btn[disabled]{opacity:.45; cursor:not-allowed;}
+  .user-chip{display:flex; align-items:center; gap:8px; font-size:13px;}
+  .user-chip img{width:30px; height:30px; border-radius:50%; border:2px solid var(--copper);}
+
+  .hero{max-width:1100px; margin:0 auto; padding:40px 28px 20px;}
+  .hero-eyebrow{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.2em; color:var(--copper-dark); display:flex; align-items:center; gap:10px;}
+  .hero-eyebrow::before{content:""; width:26px; height:1px; background:var(--copper-dark); display:inline-block;}
+  .hero h1{font-size:clamp(30px,5vw,40px); margin:10px 0 8px; line-height:1.02; color:var(--navy);}
+
+  .tabs-wrap{max-width:1100px; margin:20px auto 0; padding:0 28px;}
+  .tabs{display:flex; gap:14px; margin-bottom:26px; flex-wrap:wrap;}
+  .tab-stamp{
+    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.08em;
+    font-size:14px; font-weight:600; padding:12px 26px;
+    border:2px dashed var(--line); border-radius:4px; background:transparent; color:var(--slate); cursor:pointer;
+    transform:rotate(-1deg); transition:all .15s ease;
+  }
+  .tab-stamp:nth-child(even){transform:rotate(1deg);}
+  .tab-stamp.active{border-style:solid; border-color:var(--copper); color:var(--copper-dark); background:#fff; box-shadow:2px 2px 0 var(--copper); transform:rotate(0);}
+
+  main{max-width:1100px; margin:0 auto; padding:0 28px 80px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .grid-2{display:grid; grid-template-columns:340px 1fr; gap:24px; align-items:start;}
+  @media(max-width:820px){.grid-2{grid-template-columns:1fr;}}
+
+  .card{background:#fff; border:1px solid var(--line); border-radius:5px; padding:22px; position:relative;}
+  .card::before{content:""; position:absolute; top:10px; right:10px; bottom:10px; left:10px; border:1px dashed var(--paper-dim); pointer-events:none; border-radius:3px;}
+  .card h3{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:15px; margin:0 0 16px; color:var(--navy); border-bottom:2px solid var(--copper); padding-bottom:8px;}
+
+  label{display:block; font-size:12px; font-weight:600; letter-spacing:.03em; margin:14px 0 5px; color:var(--slate);}
+  input,select{width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:3px; font-family:'Inter',sans-serif; font-size:14px; background:#FCFBF7;}
+  input:focus,select:focus{outline:2px solid var(--copper); outline-offset:1px;}
+  .row-2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+
+  /* Tables */
+  .ledger{border:1px solid var(--line); border-radius:5px; background:#fff; overflow:hidden;}
+  .ledger-head{
+    display:grid; gap:8px; padding:12px 18px; background:var(--navy); color:var(--paper);
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  }
+  .ledger-row{
+    display:grid; gap:8px; padding:14px 18px; align-items:center;
+    border-top:1px dashed var(--line); font-size:13.5px;
+  }
+  .ledger-row:hover{background:#FBF8EF;}
+  .jenis-badge{display:inline-block; font-size:11px; padding:3px 8px; border-radius:10px; background:var(--paper-dim); color:var(--slate); font-family:'JetBrains Mono',monospace;}
+  .ledger-empty{padding:30px; text-align:center; color:var(--slate); font-size:14px;}
+  
+  .col-produk{grid-template-columns: 2fr 1.2fr 1fr .8fr .8fr 1.5fr auto;}
+  .col-update{grid-template-columns: 1fr 1fr 1.5fr 3fr;}
+
+  .overlay{position:fixed; inset:0; background:rgba(11,30,51,.55); display:none; align-items:center; justify-content:center; z-index:100; padding:20px;}
+  .overlay.active{display:flex;}
+  .modal{background:#fff; border-radius:6px; padding:26px; width:100%; max-width:400px; border-top:4px solid var(--copper); max-height:90vh; overflow-y:auto;}
+  .modal h4{font-family:'Oswald',sans-serif; text-transform:uppercase; margin:0 0 4px; color:var(--navy);}
+  .modal p{font-size:13px; color:var(--slate); margin:0 0 16px;}
+
+  .toast{position:fixed; bottom:22px; right:22px; background:var(--navy); color:#fff; padding:12px 18px; border-radius:4px; border-left:4px solid var(--copper); font-size:13.5px; z-index:200; opacity:0; transform:translateY(10px); transition:all .25s ease; max-width:300px;}
+  .toast.show{opacity:1; transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">NG</div>
+    <div class="brand-text">
+      <div class="display">Novastra Global Supply</div>
+      <div class="tag">SUPPLIER PORTAL</div>
+    </div>
+  </div>
+  <div class="auth-area" id="authArea">
+    <!-- Diisi oleh JS -->
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-eyebrow">DASHBOARD SUPPLIER</div>
+  <h1>Kelola Produk & Pantau Perubahan.</h1>
+</section>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab-stamp active" data-tab="produk">Manajemen Produk</button>
+    <button class="tab-stamp" data-tab="riwayat">Riwayat Update</button>
+    <button class="tab-stamp" data-tab="cetak">🖨️ Cetak PDF</button>
+  </div>
+</div>
+
+<main>
+  <!-- PANEL 1: MANAJEMEN PRODUK -->
+  <section class="panel active" id="panel-produk">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Tambah Produk Baru</h3>
+        <form id="productForm">
+          <label>Nama Produk</label>
+          <input type="text" id="p_nama" required>
+          <label>Jenis / Kategori</label>
+          <input type="text" id="p_jenis" required>
+          <div class="row-2">
+            <div><label>Harga (Rp)</label><input type="number" id="p_harga" min="0" required></div>
+            <div><label>Jumlah / Stok</label><input type="number" id="p_jumlah" min="0" required></div>
+          </div>
+          <label>Minimal Pesan</label>
+          <input type="number" id="p_minpesan" min="1" required>
+          <button type="submit" class="btn btn-copper" style="width:100%; margin-top:18px;" id="submitProductBtn">
+            Simpan & Catat Riwayat
+          </button>
+        </form>
+      </div>
+
+      <div>
+        <h3 class="display" style="font-size:14px; color:var(--slate); margin-bottom:10px;">Produk Anda</h3>
+        <div class="ledger">
+          <div class="ledger-head col-produk">
+            <div>Produk</div><div>Jenis</div><div>Harga</div><div>Stok</div><div>Min</div><div>Diubah Terakhir</div><div>Opsi</div>
+          </div>
+          <div id="myProductsList"><div class="ledger-empty">Memuat...</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PANEL 2: RIWAYAT UPDATE -->
+  <section class="panel" id="panel-riwayat">
+    <div class="card" style="max-width:100%;">
+      <h3>Audit Trail - Aktivitas Update Anda</h3>
+      <p style="font-size:13px; color:var(--slate); margin-bottom:20px;">Sistem merekam semua perubahan data produk yang Anda lakukan beserta ID dan detailnya.</p>
+      
+      <div class="ledger">
+        <div class="ledger-head col-update">
+          <div>Tanggal & Waktu</div><div>Aksi</div><div>ID & Nama Produk</div><div>Detail Perubahan</div>
+        </div>
+        <div id="updatesList"><div class="ledger-empty">Belum ada aktivitas.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PANEL 3: CETAK DATA -->
+  <section class="panel" id="panel-cetak">
+    <div class="card" style="max-width:600px; margin:0 auto;">
+      <h3>Eksport Data (PDF)</h3>
+      <p style="font-size:13px; color:var(--slate);">Hanya mencetak data dan riwayat yang Anda kelola.</p>
+      
+      <form id="printForm">
+        <label>Pilih Data Untuk Dicetak</label>
+        <select id="printSource">
+          <option value="produk">Data Produk Terkini</option>
+          <option value="riwayat">Riwayat Update Data</option>
+        </select>
+
+        <div class="row-2">
+          <div>
+            <label>Urutkan Berdasarkan</label>
+            <select id="printSortBy">
+              <!-- Diisi via JS -->
+            </select>
+          </div>
+          <div>
+            <label>Arah Urutan</label>
+            <select id="printSortOrder">
+              <option value="asc">Menaik (A-Z / Lama-Baru)</option>
+              <option value="desc">Menurun (Z-A / Baru-Lama)</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-copper" style="width:100%; margin-top:24px; padding:12px;" id="btnPrintPDF">
+          Tarik Data & Unduh PDF
+        </button>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<!-- MODAL EDIT PRODUK -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <h4>Edit Produk</h4>
+    <p>Perubahan ini akan dicatat dalam Riwayat Update.</p>
+    <label>Nama Produk</label><input type="text" id="e_nama" required>
+    <label>Jenis / Kategori</label><input type="text" id="e_jenis" required>
+    <div class="row-2">
+      <div><label>Harga (Rp)</label><input type="number" id="e_harga" min="0" required></div>
+      <div><label>Jumlah / Stok</label><input type="number" id="e_jumlah" min="0" required></div>
+    </div>
+    <label>Minimal Pesan</label><input type="number" id="e_minpesan" min="1" required>
+    <div style="display:flex; gap:10px; margin-top:18px;">
+      <button class="btn btn-ghost" id="editCancelBtn" style="flex:1;">Batal</button>
+      <button class="btn btn-copper" id="editConfirmBtn" style="flex:1;">Simpan & Catat</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* =======================================================================
+   ⚙️  KONFIGURASI FIREBASE
+   ======================================================================= */
+const firebaseConfig = {
+      apiKey: "AIzaSyDXXnEyXgnzZqrBiTOkW47kAuV7MyzQ4EM",
+  authDomain: "nodemcu-91530.firebaseapp.com",
+  databaseURL: "https://nodemcu-91530-default-rtdb.firebaseio.com",
+  projectId: "nodemcu-91530",
+  storageBucket: "nodemcu-91530.appspot.com",
+  messagingSenderId: "113192658909",
+  appId: "1:113192658909:web:ed5ae18fa4d708faa2f834",
+  measurementId: "G-HG7WK7ZH7M"
+};
+const GOOGLE_CLIENT_ID = "113192658909-jcurln3aqrco5ll8lvjej897673u0aop.apps.googleusercontent.com";"
+};
+/* ======================================================================= */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getDatabase, ref, get, push, remove, update, onValue, query as rtdbQuery, orderByChild, equalTo, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getDatabase(app); 
+
+let currentUser = null;
+let myProducts = [];
+let myUpdates = [];
+
+// Utilitas UI
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 3000);
+}
+function formatRupiah(n){ return "Rp " + Number(n||0).toLocaleString("id-ID"); }
+function formatDateTime(ts){
+  if(!ts) return "-";
+  return new Date(ts).toLocaleString("id-ID", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+}
+
+// Tabs
+document.querySelectorAll(".tab-stamp").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab-stamp").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(`panel-${btn.dataset.tab}`).classList.add("active");
+  });
+});
+
+/* ---------------- 1. AUTHENTICATION & ACCESS CONTROL ---------------- */
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    const userSnap = await get(ref(db, `users/${user.uid}`));
+    
+    // VALIDASI AKSES: Hanya level 'supplier' ATAU 'admin' yang bisa membuka halaman ini
+    if(userSnap.exists() && (userSnap.val().level === 'supplier' || userSnap.val().level === 'admin')) {
+      currentUser = user;
+      document.getElementById("authArea").innerHTML = `
+        <div class="user-chip"><img src="${user.photoURL || 'https://via.placeholder.com/30'}" alt="">
+        <span>${user.displayName || userSnap.val().nama}</span></div>
+        <button class="btn btn-outline" id="logoutBtn">Keluar</button>
+      `;
+      
+      // Muat Data
+      loadMyProducts();
+      loadMyUpdates();
+    } else {
+      // Jika bukan supplier atau admin, tendang kembali ke halaman login
+      alert("Akses Ditolak. Halaman ini khusus untuk Supplier dan Admin.");
+      window.location.href = 'index.html'; // Sesuaikan dengan nama file login Anda
+    }
+  } else {
+    // Jika tidak ada user login, tendang ke halaman login
+    window.location.href = 'index.html'; 
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'logoutBtn') signOut(auth);
+});
+
+/* ---------------- 2. MANAJEMEN PRODUK & RIWAYAT UPDATE ---------------- */
+
+// Fungsi untuk mencatat Riwayat (Audit Trail)
+async function recordUpdate(productId, productName, action, detailStr) {
+  try {
+    await push(ref(db, "product_updates"), {
+      productId: productId,
+      productName: productName,
+      action: action, // "TAMBAH", "EDIT", "HAPUS"
+      detail: detailStr,
+      supplierUid: currentUser.uid,
+      timestamp: serverTimestamp()
+    });
+  } catch (err) {
+    console.error("Gagal mencatat log riwayat:", err);
+  }
+}
+
+// Load Produk (Hanya milik user ini)
+function loadMyProducts() {
+  const q = rtdbQuery(ref(db, "products"), orderByChild("supplierUid"), equalTo(currentUser.uid));
+  onValue(q, (snapshot) => {
+    myProducts = [];
+    snapshot.forEach(child => { myProducts.push({ id: child.key, ...child.val() }); });
+    myProducts.sort((a,b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+    renderProducts();
+  });
+}
+
+function renderProducts() {
+  const wrap = document.getElementById("myProductsList");
+  if(myProducts.length === 0){
+    wrap.innerHTML = `<div class="ledger-empty">Belum ada produk.</div>`; return;
+  }
+  wrap.innerHTML = myProducts.map(p=>`
+    <div class="ledger-row col-produk">
+      <span style="font-weight:600; color:var(--navy);">${p.nama}</span>
+      <span><span class="jenis-badge">${p.jenis}</span></span>
+      <span class="mono" style="color:var(--copper-dark); font-weight:600;">${formatRupiah(p.harga)}</span>
+      <span class="mono">${p.jumlah}</span>
+      <span class="mono">${p.minPesan}</span>
+      <span style="font-size:11px; color:var(--slate);">${formatDateTime(p.updatedAt || p.createdAt)}</span>
+      <span style="display:flex; gap:6px;">
+        <button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" data-edit="${p.id}">Edit</button>
+        <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" data-delete="${p.id}">Hapus</button>
+      </span>
+    </div>
+  `).join("");
+}
+
+// Load Riwayat Update (Hanya milik user ini)
+function loadMyUpdates() {
+  const q = rtdbQuery(ref(db, "product_updates"), orderByChild("supplierUid"), equalTo(currentUser.uid));
+  onValue(q, (snapshot) => {
+    myUpdates = [];
+    snapshot.forEach(child => { myUpdates.push({ id: child.key, ...child.val() }); });
+    myUpdates.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    renderUpdates();
+  });
+}
+
+function renderUpdates() {
+  const wrap = document.getElementById("updatesList");
+  if(myUpdates.length === 0){
+    wrap.innerHTML = `<div class="ledger-empty">Belum ada riwayat aktivitas.</div>`; return;
+  }
+  wrap.innerHTML = myUpdates.map(u=>`
+    <div class="ledger-row col-update" style="font-size:12.5px;">
+      <span style="color:var(--slate);">${formatDateTime(u.timestamp)}</span>
+      <span style="font-weight:600; color:${u.action==='TAMBAH'?'var(--ok)':(u.action==='HAPUS'?'var(--danger)':'var(--copper-dark)')}">${u.action}</span>
+      <span class="mono" style="font-size:11px;">[${u.productId.slice(0,6)}] ${u.productName}</span>
+      <span>${u.detail}</span>
+    </div>
+  `).join("");
+}
+
+// Tambah Produk
+document.getElementById("productForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const nama = document.getElementById("p_nama").value.trim();
+  const jenis = document.getElementById("p_jenis").value.trim();
+  const harga = Number(document.getElementById("p_harga").value);
+  const jumlah = Number(document.getElementById("p_jumlah").value);
+  const minPesan = Number(document.getElementById("p_minpesan").value);
+
+  const btn = document.getElementById("submitProductBtn");
+  btn.disabled = true; btn.textContent = "Menyimpan...";
+
+  try{
+    const prodRef = push(ref(db, "products")); // Generate Reference
+    const prodData = {
+      nama, jenis, harga, jumlah, minPesan,
+      supplierUid: currentUser.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+    await update(prodRef, prodData);
+    
+    // Catat Riwayat
+    await recordUpdate(prodRef.key, nama, "TAMBAH", "Input produk baru ke sistem.");
+
+    document.getElementById("productForm").reset();
+    toast("Produk ditambahkan & riwayat dicatat.");
+  } catch(err){
+    toast("Error: " + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Simpan & Catat Riwayat";
+  }
+});
+
+// Hapus Produk
+document.addEventListener("click", async (e)=>{
+  const delId = e.target.getAttribute("data-delete");
+  if(delId){
+    const prod = myProducts.find(p=>p.id === delId);
+    if(confirm(`Hapus permanen produk: ${prod.nama}?`)){
+      try{
+        await remove(ref(db, `products/${delId}`));
+        // Catat Riwayat
+        await recordUpdate(delId, prod.nama, "HAPUS", "Produk dihapus dari sistem.");
+        toast("Produk berhasil dihapus.");
+      }catch(err){ toast("Error: "+err.message); }
+    }
+  }
+});
+
+/* ---------------- 3. LOGIKA EDIT & KOMPARASI DATA ---------------- */
+let editTarget = null;
+const editOverlay = document.getElementById("editOverlay");
+
+document.addEventListener("click", (e)=>{
+  const editId = e.target.getAttribute("data-edit");
+  if(editId){
+    editTarget = myProducts.find(p=>p.id === editId);
+    document.getElementById("e_nama").value = editTarget.nama;
+    document.getElementById("e_jenis").value = editTarget.jenis;
+    document.getElementById("e_harga").value = editTarget.harga;
+    document.getElementById("e_jumlah").value = editTarget.jumlah;
+    document.getElementById("e_minpesan").value = editTarget.minPesan;
+    editOverlay.classList.add("active");
+  }
+});
+
+document.getElementById("editCancelBtn").addEventListener("click", ()=>{
+  editOverlay.classList.remove("active"); editTarget = null;
+});
+
+document.getElementById("editConfirmBtn").addEventListener("click", async ()=>{
+  if(!editTarget) return;
+
+  const btn = document.getElementById("editConfirmBtn");
+  const nama = document.getElementById("e_nama").value.trim();
+  const jenis = document.getElementById("e_jenis").value.trim();
+  const harga = Number(document.getElementById("e_harga").value);
+  const jumlah = Number(document.getElementById("e_jumlah").value);
+  const minPesan = Number(document.getElementById("e_minpesan").value);
+
+  // Cari tahu apa saja yang berubah
+  let changes = [];
+  if(editTarget.nama !== nama) changes.push(`Nama: ${editTarget.nama} ➔ ${nama}`);
+  if(editTarget.jenis !== jenis) changes.push(`Jenis: ${editTarget.jenis} ➔ ${jenis}`);
+  if(editTarget.harga !== harga) changes.push(`Harga: ${editTarget.harga} ➔ ${harga}`);
+  if(editTarget.jumlah !== jumlah) changes.push(`Stok: ${editTarget.jumlah} ➔ ${jumlah}`);
+  if(editTarget.minPesan !== minPesan) changes.push(`Min Pesan: ${editTarget.minPesan} ➔ ${minPesan}`);
+
+  if(changes.length === 0){
+    toast("Tidak ada perubahan yang dilakukan.");
+    editOverlay.classList.remove("active"); return;
+  }
+
+  btn.disabled = true; btn.textContent = "Menyimpan...";
+  try{
+    await update(ref(db, `products/${editTarget.id}`), {
+      nama, jenis, harga, jumlah, minPesan, updatedAt: serverTimestamp()
+    });
+    // Catat Riwayat
+    const detailString = changes.join(" | ");
+    await recordUpdate(editTarget.id, nama, "EDIT", detailString);
+
+    toast("Berhasil diperbarui & dicatat.");
+    editOverlay.classList.remove("active");
+  } catch(err){
+    toast("Error: " + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Simpan & Catat";
+    editTarget = null;
+  }
+});
+
+
+/* ---------------- 4. CETAK DATA (jsPDF) ---------------- */
+const printSource = document.getElementById("printSource");
+const printSortBy = document.getElementById("printSortBy");
+const printSortOrder = document.getElementById("printSortOrder");
+
+// Dynamic Sort Options
+function updateSortOptions() {
+  if(printSource.value === 'produk'){
+    printSortBy.innerHTML = `
+      <option value="nama">Nama Produk</option>
+      <option value="jenis">Jenis Kategori</option>
+      <option value="harga">Harga</option>
+      <option value="jumlah">Stok (Jumlah)</option>
+      <option value="updatedAt">Waktu Terakhir Ubah</option>
+    `;
+  } else {
+    printSortBy.innerHTML = `
+      <option value="timestamp">Waktu Kejadian (Tanggal)</option>
+      <option value="action">Jenis Aksi</option>
+      <option value="productName">Nama Produk</option>
+    `;
+  }
+}
+printSource.addEventListener("change", updateSortOptions);
+updateSortOptions(); // Init load
+
+document.getElementById("btnPrintPDF").addEventListener("click", () => {
+  if(!currentUser){ toast("Terjadi kesalahan authentikasi"); return; }
+  
+  const source = printSource.value;
+  const sortKey = printSortBy.value;
+  const isAsc = printSortOrder.value === 'asc';
+
+  let dataToPrint = [];
+  let tableHeaders = [];
+  let tableRows = [];
+  let title = "";
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('landscape'); // Kertas horizontal agar tabel lebih rapi
+
+  // Copy array and sort
+  if(source === 'produk'){
+    if(myProducts.length === 0){ toast("Tidak ada data produk."); return; }
+    title = "Laporan Data Produk (Supplier)";
+    dataToPrint = [...myProducts].sort((a,b) => {
+      let valA = a[sortKey] || ''; let valB = b[sortKey] || '';
+      if(typeof valA === 'string') valA = valA.toLowerCase();
+      if(typeof valB === 'string') valB = valB.toLowerCase();
+      if(valA < valB) return isAsc ? -1 : 1;
+      if(valA > valB) return isAsc ? 1 : -1;
+      return 0;
+    });
+
+    tableHeaders = [["ID Sistem", "Nama Produk", "Jenis", "Harga (Rp)", "Stok", "Min Pesan", "Update Terakhir"]];
+    tableRows = dataToPrint.map(p => [
+      p.id.substring(0,8), 
+      p.nama, 
+      p.jenis, 
+      formatRupiah(p.harga), 
+      p.jumlah.toString(), 
+      p.minPesan.toString(), 
+      formatDateTime(p.updatedAt || p.createdAt)
+    ]);
+  } else {
+    if(myUpdates.length === 0){ toast("Tidak ada riwayat update."); return; }
+    title = "Audit Trail / Riwayat Update (Supplier)";
+    dataToPrint = [...myUpdates].sort((a,b) => {
+      let valA = a[sortKey] || ''; let valB = b[sortKey] || '';
+      if(typeof valA === 'string') valA = valA.toLowerCase();
+      if(typeof valB === 'string') valB = valB.toLowerCase();
+      if(valA < valB) return isAsc ? -1 : 1;
+      if(valA > valB) return isAsc ? 1 : -1;
+      return 0;
+    });
+
+    tableHeaders = [["Waktu Kejadian", "Aksi", "ID Produk", "Nama Produk", "Detail Perubahan"]];
+    tableRows = dataToPrint.map(u => [
+      formatDateTime(u.timestamp),
+      u.action,
+      u.productId.substring(0,8),
+      u.productName,
+      u.detail
+    ]);
+  }
+
+  // Desain & Layout Header PDF
+  doc.setFontSize(16);
+  doc.setTextColor(11, 30, 51); // Navy
+  doc.text("NOVASTRA GLOBAL SUPPLY (NG SUPPLY)", 14, 15);
+  doc.setFontSize(12);
+  doc.setTextColor(75, 85, 99); // Slate
+  doc.text(title, 14, 22);
+  doc.setFontSize(10);
+  doc.text(`User Akses: ${currentUser.displayName || currentUser.email}`, 14, 28);
+  doc.text(`Dicetak pada: ${new Date().toLocaleString("id-ID")}`, 14, 33);
+
+  // Render Tabel
+  doc.autoTable({
+    startY: 40,
+    head: tableHeaders,
+    body: tableRows,
+    theme: 'grid',
+    styles: { font: 'helvetica', fontSize: 9 },
+    headStyles: { fillColor: [11, 30, 51], textColor: [242, 238, 228] }, // Navy head
+    alternateRowStyles: { fillColor: [252, 251, 247] }
+  });
+
+  // Download PDF
+  const filename = `NG_Supply_${source}_${new Date().getTime()}.pdf`;
+  doc.save(filename);
+  toast(`Berhasil mengunduh PDF: ${filename}`);
+});
+</script>
+</body>
+</html>
