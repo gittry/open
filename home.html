@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Workspace | NG Supply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Google Material Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
+
+<style>
+  :root {
+    --navy: #0B1E33;
+    --steel: #16324F;
+    --paper: #F2EEE4;
+    --copper: #C97C2C;
+    --copper-dark: #A5621E;
+    --slate: #4B5563;
+    --ink: #1B2430;
+    --line: #C9BFA6;
+    --sidebar-collapsed: 70px;
+    --sidebar-expanded: 240px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    background: var(--paper); color: var(--ink);
+  }
+
+  /* Full Layout Container */
+  .layout {
+    display: flex; height: 100vh; width: 100vw;
+  }
+
+  /* ================= SIDEBAR ================= */
+  .sidebar {
+    background: var(--navy);
+    color: var(--paper);
+    width: var(--sidebar-collapsed);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    border-right: 3px solid var(--copper);
+    z-index: 100;
+  }
+
+  .sidebar.expanded {
+    width: var(--sidebar-expanded);
+  }
+
+  /* Sidebar Header & Toggle */
+  .sidebar-header {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-bottom: 1px dashed rgba(201, 191, 166, 0.2);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .toggle-btn {
+    background: transparent; border: none; color: var(--copper);
+    cursor: pointer; padding: 8px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .toggle-btn:hover { background: rgba(201, 124, 44, 0.15); }
+  
+  .brand-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 18px;
+    margin-left: 12px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .sidebar.expanded .brand-title { opacity: 1; }
+
+  /* Navigasi Menu */
+  .nav-menu {
+    flex: 1;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
+  /* Sembunyikan scrollbar bawaan */
+  .nav-menu::-webkit-scrollbar { display: none; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 22px;
+    color: #A1AAB5;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    border-left: 4px solid transparent;
+  }
+
+  .nav-item:hover {
+    background: var(--steel);
+    color: #fff;
+  }
+
+  .nav-item.active {
+    background: rgba(201, 124, 44, 0.15);
+    color: var(--copper);
+    border-left-color: var(--copper);
+  }
+
+  .nav-icon {
+    font-size: 24px;
+    min-width: 24px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .nav-text {
+    margin-left: 16px;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  
+  .sidebar.expanded .nav-text {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* User Profile Area (Bawah Sidebar) */
+  .user-area {
+    padding: 16px;
+    border-top: 1px dashed rgba(201, 191, 166, 0.2);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+    min-height: 70px;
+  }
+
+  .user-area .nav-icon { color: var(--paper); }
+  .user-info {
+    margin-left: 16px;
+    display: flex; flex-direction: column;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .sidebar.expanded .user-info { opacity: 1; }
+  
+  .user-name { font-size: 13px; font-weight: 600; color: #fff; }
+  .user-role { font-size: 11px; color: var(--copper); font-family: 'Oswald', sans-serif; letter-spacing: .05em; text-transform: uppercase;}
+
+  /* ================= MAIN CONTENT (IFRAME) ================= */
+  .main-content {
+    flex: 1;
+    background: var(--paper);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Overlay Loading Admin */
+  #loadingOverlay {
+    position: absolute; inset: 0; background: var(--paper);
+    z-index: 200; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  #loadingOverlay h2 { font-family: 'Oswald', sans-serif; color: var(--navy); text-transform: uppercase; }
+
+  /* Iframe pembungkus halaman */
+  iframe#contentFrame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: var(--paper);
+  }
+</style>
+</head>
+<body>
+
+<!-- Overlay Loading Sebelum Autentikasi Selesai -->
+<div id="loadingOverlay">
+  <span class="material-symbols-rounded" style="font-size: 48px; color: var(--copper); animation: spin 1s linear infinite;">autorenew</span>
+  <h2>Memverifikasi Otoritas Admin...</h2>
+</div>
+
+<div class="layout">
+  
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button class="toggle-btn" onclick="toggleSidebar()">
+        <span class="material-symbols-rounded">menu</span>
+      </button>
+      <div class="brand-title">NG SUPPLY</div>
+    </div>
+
+    <div class="nav-menu">
+      <a class="nav-item" onclick="loadPage('index.html', this)">
+        <span class="material-symbols-rounded nav-icon">home</span>
+        <span class="nav-text">Halaman Utama</span>
+      </a>
+      
+      <!-- Default Halaman Aktif Pertama (admin.html) -->
+      <a class="nav-item active" onclick="loadPage('admin.html', this)">
+        <span class="material-symbols-rounded nav-icon">admin_panel_settings</span>
+        <span class="nav-text">Dashboard Admin</span>
+      </a>
+
+      <a class="nav-item" onclick="loadPage('supplier.html', this)">
+        <span class="material-symbols-rounded nav-icon">inventory_2</span>
+        <span class="nav-text">Manajemen Supplier</span>
+      </a>
+
+      <a class="nav-item" onclick="loadPage('pembelian.html', this)">
+        <span class="material-symbols-rounded nav-icon">shopping_cart</span>
+        <span class="nav-text">Data Pembelian</span>
+      </a>
+
+      <a class="nav-item" onclick="loadPage('user.html', this)">
+        <span class="material-symbols-rounded nav-icon">group</span>
+        <span class="nav-text">Manajemen User</span>
+      </a>
+
+      <a class="nav-item" onclick="loadPage('analytics.html', this)">
+        <span class="material-symbols-rounded nav-icon">analytics</span>
+        <span class="nav-text">Analytics & Laporan</span>
+      </a>
+
+      <a class="nav-item" onclick="loadPage('backup.html', this)">
+        <span class="material-symbols-rounded nav-icon">backup</span>
+        <span class="nav-text">Sistem Backup</span>
+      </a>
+    </div>
+
+    <div class="user-area" style="cursor: pointer;" onclick="logout()">
+      <span class="material-symbols-rounded nav-icon" style="color:var(--danger);">logout</span>
+      <div class="user-info">
+        <span class="user-name" id="displayAdminName">Memuat...</span>
+        <span class="user-role">Log Out</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- AREA KONTEN (IFRAME) -->
+  <div class="main-content">
+    <!-- Src awal diarahkan ke admin.html sebagai beranda admin -->
+    <iframe id="contentFrame" src="admin.html"></iframe>
+  </div>
+
+</div>
+
+<script type="module">
+/* =======================================================================
+   ⚙️  KONFIGURASI FIREBASE
+   ======================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDXXnEyXgnzZqrBiTOkW47kAuV7MyzQ4EM",
+  authDomain: "nodemcu-91530.firebaseapp.com",
+  databaseURL: "https://nodemcu-91530-default-rtdb.firebaseio.com",
+  projectId: "nodemcu-91530",
+  storageBucket: "nodemcu-91530.appspot.com",
+  messagingSenderId: "113192658909",
+  appId: "1:113192658909:web:ed5ae18fa4d708faa2f834"
+};
+/* ======================================================================= */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+// 1. Otorisasi Otomatis saat halaman dimuat
+onAuthStateChanged(auth, async (user) => {
+  const overlay = document.getElementById("loadingOverlay");
+  
+  if (user) {
+    try {
+      // Cek level pada tabel users
+      const userSnap = await get(ref(db, `users/${user.uid}`));
+      if(userSnap.exists() && userSnap.val().level === 'admin') {
+        // LULUS OTORISASI
+        document.getElementById("displayAdminName").textContent = user.displayName || userSnap.val().nama;
+        overlay.style.display = "none"; // Hilangkan layar loading
+      } else {
+        // BUKAN ADMIN
+        alert("Akses Ilegal: Akun Anda tidak memiliki otoritas Administrator.");
+        window.location.href = 'index.html';
+      }
+    } catch(err) {
+      console.error(err);
+      window.location.href = 'index.html';
+    }
+  } else {
+    // BELUM LOGIN
+    window.location.href = 'index.html';
+  }
+});
+
+// 2. Fungsi Log Out untuk dieksekusi global
+window.logout = function() {
+  if(confirm("Anda yakin ingin keluar dari Panel Admin?")) {
+    signOut(auth).then(() => {
+      window.location.href = 'index.html';
+    });
+  }
+}
+</script>
+
+<script>
+  /* ================= FRONTEND LOGIC (UI INTERACTION) ================= */
+  
+  // Fungsi Expand/Collapse Sidebar
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('expanded');
+  }
+
+  // Fungsi mengganti halaman Iframe tanpa reload keseluruhan layout
+  function loadPage(pageUrl, element) {
+    // Update src Iframe
+    document.getElementById('contentFrame').src = pageUrl;
+
+    // Hapus class 'active' dari semua menu
+    const menuItems = document.querySelectorAll('.nav-item');
+    menuItems.forEach(item => item.classList.remove('active'));
+
+    // Tambahkan class 'active' ke menu yang baru saja diklik
+    if(element) {
+      element.classList.add('active');
+    }
+    
+    // Opsional: Otomatis menutup sidebar di layar kecil (HP) setelah klik menu
+    if(window.innerWidth <= 768) {
+      document.getElementById('sidebar').classList.remove('expanded');
+    }
+  }
+</script>
+</body>
+</html>
