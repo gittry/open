@@ -6,56 +6,34 @@
 <title>Gerbang Akses | NG Supply</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
 <style>
   :root{
-    --navy:#0B1E33;
-    --steel:#16324F;
-    --paper:#F2EEE4;
-    --paper-dim:#E7E1D2;
-    --copper:#C97C2C;
-    --copper-dark:#A5621E;
-    --slate:#4B5563;
-    --ink:#1B2430;
-    --line:#C9BFA6;
-    --ok:#3F6B4F;
-    --danger:#9C3B2E;
+    --navy:#0B1E33; --steel:#16324F; --paper:#F2EEE4; --paper-dim:#E7E1D2;
+    --copper:#C97C2C; --copper-dark:#A5621E; --slate:#4B5563; --ink:#1B2430;
+    --line:#C9BFA6; --ok:#3F6B4F; --danger:#9C3B2E; --wa:#25D366;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0; height:100%;}
   body{
-    background:var(--paper);
-    color:var(--ink);
-    font-family:'Inter',sans-serif;
-    background-image:
-      linear-gradient(var(--paper-dim) 1px, transparent 1px),
-      linear-gradient(90deg, var(--paper-dim) 1px, transparent 1px);
-    background-size: 28px 28px;
-    display:flex;
-    flex-direction:column;
+    background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif;
+    background-image: linear-gradient(var(--paper-dim) 1px, transparent 1px), linear-gradient(90deg, var(--paper-dim) 1px, transparent 1px);
+    background-size: 28px 28px; display:flex; flex-direction:column;
   }
   .mono{font-family:'JetBrains Mono',monospace;}
   .display{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.03em;}
 
   /* ===== Top bar ===== */
   header.topbar{
-    background:var(--navy);
-    color:var(--paper);
-    padding:16px 28px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    border-bottom:3px solid var(--copper);
-    position:sticky; top:0; z-index:50;
+    background:var(--navy); color:var(--paper); padding:16px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:3px solid var(--copper); position:sticky; top:0; z-index:50;
   }
   .brand{display:flex; align-items:center; gap:12px;}
   .brand-mark{
-    width:42px; height:42px;
-    border:2px solid var(--copper);
-    border-radius:4px;
+    width:42px; height:42px; border:2px solid var(--copper); border-radius:4px;
     display:flex; align-items:center; justify-content:center;
-    font-family:'Oswald',sans-serif;
-    font-weight:700; font-size:15px; color:var(--copper);
-    transform:rotate(-2deg);
+    font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; color:var(--copper); transform:rotate(-2deg);
   }
   .brand-text .display{font-size:19px; font-weight:600; line-height:1.1; color:#fff;}
   .brand-text .tag{font-size:11px; letter-spacing:.18em; color:var(--copper); font-family:'JetBrains Mono',monospace;}
@@ -66,30 +44,31 @@
     font-family:'Inter',sans-serif; font-weight:600; font-size:14px;
     padding:10px 18px; border-radius:3px; border:1px solid transparent;
     cursor:pointer; transition:transform .12s ease, background .12s ease;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; text-decoration:none;
   }
   .btn:active{transform:translateY(1px);}
   .btn-copper{background:var(--copper); color:#fff; border-color:var(--copper-dark);}
   .btn-copper:hover{background:var(--copper-dark);}
   .btn-outline{background:transparent; color:var(--paper); border-color:rgba(242,238,228,.4);}
   .btn-outline:hover{border-color:var(--copper);}
-  .btn[disabled]{opacity:.45; cursor:not-allowed;}
+  .btn-wa{background:var(--wa); color:#fff; border-color:#1EBE5C;}
+  .btn-wa:hover{background:#1EBE5C;}
 
   .user-chip{display:flex; align-items:center; gap:8px; font-size:13px;}
   .user-chip img{width:30px; height:30px; border-radius:50%; border:2px solid var(--copper);}
 
   /* ===== Container Auth ===== */
   main{
-    flex:1; display:flex; align-items:center; justify-content:center;
-    padding:40px 20px;
+    flex:1; display:flex; align-items:center; justify-content:center; padding:40px 20px;
   }
   
   .card{
     background:#fff; border:1px solid var(--line); border-radius:5px;
     padding:30px; width:100%; max-width:480px; position:relative;
-    box-shadow: 0 10px 30px rgba(11, 30, 51, 0.05);
-    display:none; /* Sembunyikan default, atur via JS */
+    box-shadow: 0 10px 30px rgba(11, 30, 51, 0.05); display:none; 
   }
   .card.active{display:block;}
+  .card.wide{max-width: 600px;}
   .card::before{
     content:""; position:absolute; top:10px; right:10px; bottom:10px; left:10px;
     border:1px dashed var(--paper-dim); pointer-events:none; border-radius:3px;
@@ -105,29 +84,43 @@
   label{display:block; font-size:12px; font-weight:600; letter-spacing:.03em; margin:14px 0 5px; color:var(--slate);}
   label:first-of-type{margin-top:0;}
   input,textarea{
-    width:100%; padding:10px 12px;
-    border:1px solid var(--line); border-radius:3px;
-    font-family:'Inter',sans-serif; font-size:14px;
-    background:#FCFBF7; resize:vertical;
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:3px;
+    font-family:'Inter',sans-serif; font-size:14px; background:#FCFBF7; resize:vertical;
   }
   input:focus,textarea:focus{outline:2px solid var(--copper); outline-offset:1px;}
 
   /* Status Pending */
   .status-box{
     background:#FBF8EF; border:1px dashed var(--copper);
-    padding:20px; border-radius:4px; text-align:center;
-    margin-top:10px;
+    padding:20px; border-radius:4px; text-align:center; margin-top:10px;
   }
   .status-box .icon{font-size:32px; margin-bottom:10px;}
   .status-box h4{margin:0 0 8px; font-family:'Oswald',sans-serif; color:var(--copper-dark); font-size:16px;}
   .status-box p{margin:0; font-size:13px; color:var(--slate); line-height:1.5;}
 
+  /* Portal Menu (Supplier / Pembeli) */
+  .menu-grid{
+    display:grid; grid-template-columns: 1fr; gap:12px; margin-top:20px;
+  }
+  .menu-option{
+    display:flex; align-items:center; padding:16px; border:1px solid var(--line); border-radius:4px;
+    background:#FCFBF7; text-decoration:none; color:var(--navy); transition:all .2s ease;
+  }
+  .menu-option:hover{
+    border-color:var(--copper); box-shadow:0 4px 12px rgba(201, 124, 44, 0.1); transform:translateY(-2px);
+  }
+  .menu-option .icon-box{
+    width:40px; height:40px; border-radius:4px; background:var(--paper-dim); color:var(--copper-dark);
+    display:flex; align-items:center; justify-content:center; margin-right:16px;
+  }
+  .menu-option .menu-text h4{margin:0 0 4px; font-size:15px; font-weight:600;}
+  .menu-option .menu-text p{margin:0; font-size:12px; color:var(--slate);}
+
   /* Toast */
   .toast{
     position:fixed; bottom:22px; right:22px; background:var(--navy); color:#fff;
     padding:12px 18px; border-radius:4px; border-left:4px solid var(--copper);
-    font-size:13.5px; z-index:200; opacity:0; transform:translateY(10px);
-    transition:all .25s ease; max-width:300px;
+    font-size:13.5px; z-index:200; opacity:0; transform:translateY(10px); transition:all .25s ease;
   }
   .toast.show{opacity:1; transform:translateY(0);}
 </style>
@@ -138,23 +131,21 @@
   <div class="brand">
     <div class="brand-mark">NG</div>
     <div class="brand-text">
-      <div class="display" id="companyNameEl">Novastra Global Supply</div>
-      <div class="tag" id="companyShortEl">NG SUPPLY // TRADE PLATFORM</div>
+      <div class="display">Novastra Global Supply</div>
+      <div class="tag">NG SUPPLY // TRADE PLATFORM</div>
     </div>
   </div>
-  <div class="auth-area" id="authArea">
-    <!-- Tombol login akan muncul di sini via JS jika belum login -->
-  </div>
+  <div class="auth-area" id="authArea"></div>
 </header>
 
 <main>
-  <!-- PANEL 1: LOADING/CHECKING -->
+  <!-- PANEL 1: LOADING -->
   <div class="card active" id="panel-loading" style="text-align:center; padding:50px 30px;">
     <h3>Memeriksa Akses...</h3>
     <p class="desc" style="margin:0;">Mohon tunggu sebentar.</p>
   </div>
 
-  <!-- PANEL 2: LOGIN (BELUM AUTENTIKASI) -->
+  <!-- PANEL 2: LOGIN -->
   <div class="card" id="panel-login">
     <h3>Akses Platform</h3>
     <p class="desc">Sistem manajemen B2B Supply Ledger. Masuk menggunakan akun Google Anda untuk melanjutkan.</p>
@@ -163,7 +154,7 @@
     </button>
   </div>
 
-  <!-- PANEL 3: REGISTRASI (DATA BELUM ADA DI DB) -->
+  <!-- PANEL 3: REGISTRASI -->
   <div class="card" id="panel-register">
     <h3>Lengkapi Profil Anda</h3>
     <p class="desc">Akun Anda belum terdaftar di sistem. Lengkapi data berikut untuk mengajukan akses.</p>
@@ -187,16 +178,78 @@
     </form>
   </div>
 
-  <!-- PANEL 4: PENDING VERIFIKASI (LEVEL = 'new user') -->
+  <!-- PANEL 4: PENDING VERIFIKASI (NEW USER) -->
   <div class="card" id="panel-pending">
     <h3>Akun Dalam Peninjauan</h3>
     <p class="desc">Profil Anda telah berhasil disimpan di sistem, namun masih membutuhkan persetujuan.</p>
     <div class="status-box">
       <div class="icon">⏳</div>
       <h4>Menunggu Verifikasi Admin</h4>
-      <p>Mohon tunggu verifikasi akun. Admin akan segera meninjau data dan menghubungi Anda melalui WhatsApp.</p>
+      <p style="margin-bottom:16px;">Mohon tunggu verifikasi akun. Admin akan segera meninjau data Anda.</p>
+      
+      <div style="background:#fff; border:1px dashed var(--line); padding:12px; text-align:left; border-radius:4px;">
+        <p style="font-size:12px; font-weight:600; color:var(--navy); margin:0 0 6px;">Butuh bantuan?</p>
+        <p style="font-size:12px; color:var(--slate); margin:0 0 12px;">Jika dalam <b>2x24 Jam</b> Anda tidak mendapat konfirmasi, silakan lapor kepada admin dengan menekan tombol di bawah ini.</p>
+        
+        <!-- WA LINK format: 6281385434382 -->
+        <a href="https://wa.me/6281385434382?text=Halo%20Admin%20NG%20Supply,%20saya%20sudah%20mendaftar%20di%20platform%20namun%20lebih%20dari%202x24%20jam%20belum%20diverifikasi.%20Mohon%20bantuannya%20untuk%20mengecek%20akun%20saya." target="_blank" class="btn btn-wa" style="width:100%;">
+          <span class="material-symbols-rounded" style="font-size:18px;">chat</span> Lapor via WhatsApp
+        </a>
+      </div>
     </div>
   </div>
+
+  <!-- PANEL 5: PORTAL SUPPLIER -->
+  <div class="card wide" id="panel-supplier-menu">
+    <h3>Portal Supplier</h3>
+    <p class="desc">Selamat datang, silakan pilih menu yang ingin Anda kelola.</p>
+    <div class="menu-grid">
+      <a href="produk.html" class="menu-option">
+        <div class="icon-box"><span class="material-symbols-rounded">inventory_2</span></div>
+        <div class="menu-text">
+          <h4>Kelola Produk</h4>
+          <p>Tambahkan, edit stok, harga, dan manajemen katalog produk Anda.</p>
+        </div>
+      </a>
+      <a href="pesanan.html" class="menu-option">
+        <div class="icon-box"><span class="material-symbols-rounded">local_shipping</span></div>
+        <div class="menu-text">
+          <h4>Kelola Pesanan</h4>
+          <p>Tinjau order masuk, ubah status pengiriman, dan riwayat transaksi.</p>
+        </div>
+      </a>
+      <a href="edituser.html" class="menu-option">
+        <div class="icon-box"><span class="material-symbols-rounded">manage_accounts</span></div>
+        <div class="menu-text">
+          <h4>Kelola Data Pribadi</h4>
+          <p>Perbarui informasi profil, alamat, dan kontak perusahaan Anda.</p>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- PANEL 6: PORTAL PEMBELI -->
+  <div class="card wide" id="panel-pembeli-menu">
+    <h3>Portal Pembeli</h3>
+    <p class="desc">Selamat datang, silakan pilih menu untuk melanjutkan.</p>
+    <div class="menu-grid">
+      <a href="pembelian.html" class="menu-option">
+        <div class="icon-box"><span class="material-symbols-rounded">shopping_cart</span></div>
+        <div class="menu-text">
+          <h4>Pembelian & Pesanan</h4>
+          <p>Telusuri katalog barang, kelola keranjang belanja, dan lacak status pesanan.</p>
+        </div>
+      </a>
+      <a href="edituser.html" class="menu-option">
+        <div class="icon-box"><span class="material-symbols-rounded">manage_accounts</span></div>
+        <div class="menu-text">
+          <h4>Kelola Data Pribadi</h4>
+          <p>Perbarui informasi profil, alamat pengiriman, dan nomor telepon.</p>
+        </div>
+      </a>
+    </div>
+  </div>
+
 </main>
 
 <div class="toast" id="toast"></div>
@@ -206,26 +259,21 @@
    ⚙️  KONFIGURASI 
    ======================================================================= */
 const firebaseConfig = {
-    apiKey: "AIzaSyDXXnEyXgnzZqrBiTOkW47kAuV7MyzQ4EM",
+  apiKey: "AIzaSyDXXnEyXgnzZqrBiTOkW47kAuV7MyzQ4EM",
   authDomain: "nodemcu-91530.firebaseapp.com",
   databaseURL: "https://nodemcu-91530-default-rtdb.firebaseio.com",
   projectId: "nodemcu-91530",
   storageBucket: "nodemcu-91530.appspot.com",
   messagingSenderId: "113192658909",
-  appId: "1:113192658909:web:ed5ae18fa4d708faa2f834",
-  measurementId: "G-HG7WK7ZH7M"
+  appId: "1:113192658909:web:ed5ae18fa4d708faa2f834"
 };
 
 const GOOGLE_CLIENT_ID = "113192658909-jcurln3aqrco5ll8lvjej897673u0aop.apps.googleusercontent.com";
 /* ======================= AKHIR KONFIGURASI ======================= */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-  getDatabase, ref, get, set, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getDatabase, ref, get, set, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -235,11 +283,9 @@ provider.setCustomParameters({ client_id: GOOGLE_CLIENT_ID, prompt: "select_acco
 
 let currentUser = null;
 
-// Utility UI
 function toast(msg){
   const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.add("show");
+  t.textContent = msg; t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"), 3000);
 }
 
@@ -269,27 +315,22 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Pantau status login
 onAuthStateChanged(auth, async (user) => {
   const authArea = document.getElementById("authArea");
   
   if (user) {
     currentUser = user;
-    // Setel UI Topbar
     authArea.innerHTML = `
       <div class="user-chip">
         <img src="${user.photoURL || ''}" alt="">
         <span>${user.displayName || user.email}</span>
       </div>
-      <button class="btn btn-outline" id="logoutBtn">Keluar</button>
+      <button class="btn btn-outline" id="logoutBtn" style="padding:6px 12px;">Keluar</button>
     `;
-
-    // Cek Realtime Database
     checkUserData(user);
-
   } else {
     currentUser = null;
-    authArea.innerHTML = `<button class="btn btn-copper" id="loginBtn">Masuk</button>`;
+    authArea.innerHTML = `<button class="btn btn-copper" id="loginBtn" style="padding:6px 12px;">Masuk</button>`;
     showPanel('panel-login');
   }
 });
@@ -300,31 +341,30 @@ async function checkUserData(user) {
     const snapshot = await get(userRef);
 
     if (snapshot.exists()) {
-      // Data sudah ada, cek level user
       const userData = snapshot.val();
       const level = userData.level;
 
+      // ROUTING BERDASARKAN LEVEL
       if (level === 'admin') {
-        window.location.href = 'admin.html';
+        window.location.href = 'home.html';
       } else if (level === 'supplier') {
-        window.location.href = 'supplier.html';
+        showPanel('panel-supplier-menu');
       } else if (level === 'pembeli') {
-        window.location.href = 'pembeli.html';
+        showPanel('panel-pembeli-menu');
       } else if (level === 'new user') {
-        // Tampilkan panel menunggu verifikasi
         showPanel('panel-pending');
       } else {
         toast("Level pengguna tidak dikenali. Hubungi admin.");
         showPanel('panel-pending');
       }
     } else {
-      // Data belum ada di DB -> Tampilkan Form Pendaftaran
       document.getElementById('r_nama').value = user.displayName || '';
       showPanel('panel-register');
     }
   } catch (error) {
     console.error(error);
     toast("Terjadi kesalahan saat memeriksa data pengguna.");
+    showPanel('panel-login');
   }
 }
 
@@ -340,12 +380,10 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
   const btnSubmit = document.getElementById('btnSubmitRegister');
 
   if(!nama || !perusahaan || !telepon || !alamat){
-    toast("Mohon lengkapi seluruh data.");
-    return;
+    toast("Mohon lengkapi seluruh data."); return;
   }
 
-  btnSubmit.disabled = true;
-  btnSubmit.textContent = "Menyimpan Data...";
+  btnSubmit.disabled = true; btnSubmit.textContent = "Menyimpan Data...";
 
   try {
     const userRef = ref(db, `users/${currentUser.uid}`);
@@ -355,19 +393,16 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
       perusahaan: perusahaan,
       telepon: telepon,
       alamat: alamat,
-      level: 'new user', // Default level untuk user baru
+      level: 'new user', 
       createdAt: serverTimestamp()
     });
-
     toast("Berhasil menyimpan profil.");
-    // Setelah berhasil, arahkan ke panel pending
     showPanel('panel-pending');
   } catch (error) {
     console.error(error);
     toast("Gagal menyimpan data: " + error.message);
   } finally {
-    btnSubmit.disabled = false;
-    btnSubmit.textContent = "Ajukan Akun";
+    btnSubmit.disabled = false; btnSubmit.textContent = "Ajukan Akun";
   }
 });
 </script>
