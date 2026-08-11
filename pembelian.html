@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portal Pembeli | NG Supply</title>
+<title>Portal Pembelian | NG Supply</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -85,9 +85,16 @@
   .status-badge{font-size:11px; padding:4px 8px; border-radius:4px; font-weight:600; display:inline-block;}
   .ledger-empty{padding:30px; text-align:center; color:var(--slate); font-size:14px;}
 
+  /* Input Qty Spesifik */
+  .qty-input { width: 55px; text-align: center; border: 1px solid var(--line); border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 4px; background:#fff; font-weight:600;}
+  .qty-input:focus { outline: 1px solid var(--copper); }
+  /* Hapus arrow bawaan browser di input number */
+  .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .qty-input[type=number] { -moz-appearance: textfield; }
+
   /* Grid Layouts */
   .col-katalog{grid-template-columns: 2fr 1fr 1fr 1fr .8fr auto;}
-  .col-keranjang{grid-template-columns: 2fr 1.5fr 1fr 1fr auto;}
+  .col-keranjang{grid-template-columns: 2fr 1.5fr 1fr 1.2fr auto;}
   .col-order{grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr auto;}
 
   .card{background:#fff; border:1px solid var(--line); border-radius:5px; padding:22px; margin-bottom:20px;}
@@ -144,15 +151,24 @@
   <section class="panel" id="panel-keranjang">
     <div class="ledger" style="margin-bottom:20px;">
       <div class="ledger-head col-keranjang">
-        <div>Produk</div><div>Harga Satuan</div><div>Qty (Jumlah)</div><div>Subtotal</div><div>Aksi</div>
+        <div>Produk</div><div>Harga Satuan</div><div>Qty (Ketik / Atur)</div><div>Subtotal</div><div>Aksi</div>
       </div>
       <div id="keranjangList"><div class="ledger-empty">Keranjang Anda masih kosong.</div></div>
     </div>
 
-    <div class="card" style="text-align:right;">
-      <p style="font-size:14px; color:var(--slate); margin:0 0 5px;">Total Estimasi Pembayaran:</p>
-      <h2 class="mono" style="margin:0 0 20px; color:var(--navy); font-size:28px;" id="cartTotal">Rp 0</h2>
-      <button class="btn btn-copper" style="padding:12px 24px; font-size:16px;" id="btnCheckout">Checkout Sekarang</button>
+    <div class="card" style="display:flex; justify-content:space-between; align-items:flex-end;">
+      <!-- Input Tanggal Tempo Kirim -->
+      <div style="flex:1; max-width: 300px;">
+        <label for="tglKirim" style="font-size:13px; font-weight:600; color:var(--navy); display:block; margin-bottom:6px;">Tanggal Tempo Pengiriman:</label>
+        <p style="font-size:11px; color:var(--slate); margin:0 0 8px;">Pesanan akan batal otomatis jika belum selesai melewati tanggal ini.</p>
+        <input type="date" id="tglKirim" style="padding:10px; width:100%; border:1px solid var(--copper); border-radius:4px; font-family:'Inter',sans-serif;" required>
+      </div>
+
+      <div style="text-align:right;">
+        <p style="font-size:14px; color:var(--slate); margin:0 0 5px;">Total Estimasi Pembayaran:</p>
+        <h2 class="mono" style="margin:0 0 15px; color:var(--navy); font-size:28px;" id="cartTotal">Rp 0</h2>
+        <button class="btn btn-copper" style="padding:12px 30px; font-size:16px;" id="btnCheckout">Checkout Sekarang</button>
+      </div>
     </div>
   </section>
 
@@ -216,6 +232,12 @@ document.querySelectorAll(".tab-stamp").forEach(btn=>{
   });
 });
 
+// Set default value Date ke Hari ini + 1 hari
+const tomorrow = new Date();
+tomorrow.setDate(tomorrow.getDate() + 1);
+document.getElementById("tglKirim").min = tomorrow.toISOString().split('T')[0];
+document.getElementById("tglKirim").value = tomorrow.toISOString().split('T')[0];
+
 /* ---------------- 1. AUTHENTICATION & ACCESS CONTROL ---------------- */
 onAuthStateChanged(auth, async (user) => {
   if (user) {
@@ -260,7 +282,7 @@ function renderKatalog() {
     wrap.innerHTML = `<div class="ledger-empty">Tidak ada produk.</div>`; return;
   }
 
-  // PERHATIKAN: Tidak ada pemanggilan nama/alamat supplier di sini.
+  // Tidak ada pemanggilan nama/alamat supplier di sini.
   wrap.innerHTML = filtered.map(p=>`
     <div class="ledger-row col-katalog">
       <span style="font-weight:600; color:var(--navy);">${p.nama}</span>
@@ -276,7 +298,7 @@ function renderKatalog() {
 }
 document.getElementById("searchInput").addEventListener("input", renderKatalog);
 
-/* ---------------- 3. LOGIKA KERANJANG (CART) ---------------- */
+/* ---------------- 3. LOGIKA KERANJANG & INPUT QTY ---------------- */
 window.addToCart = function(productId) {
   const prod = allProducts.find(p => p.id === productId);
   if(!prod) return;
@@ -290,17 +312,18 @@ window.addToCart = function(productId) {
       productId: prod.id,
       nama: prod.nama,
       harga: prod.harga,
-      qty: prod.minPesan, // Mulai dari minimal pesan
-      supplierUid: prod.supplierUid, // Disimpan diam-diam untuk backend
+      qty: prod.minPesan, 
+      supplierUid: prod.supplierUid, 
       minPesan: prod.minPesan,
-      status: "Di Proses Admin" // Status awal per item
+      status: "Di Proses Admin"
     });
     toast("Produk masuk ke keranjang.");
   }
   updateCartUI();
 }
 
-window.ubahQty = function(index, delta) {
+// Handler Tombol Minus/Plus
+window.ubahQtyBtn = function(index, delta) {
   const item = cart[index];
   const newQty = item.qty + delta;
   if(newQty < item.minPesan) {
@@ -308,6 +331,19 @@ window.ubahQty = function(index, delta) {
   } else {
     item.qty = newQty;
   }
+  updateCartUI();
+}
+
+// Handler saat user langsung mengetik di kolom Input Qty
+window.ketikQty = function(index, inputVal) {
+  const item = cart[index];
+  let newQty = parseInt(inputVal);
+  
+  if(isNaN(newQty) || newQty < item.minPesan) {
+    alert(`Gagal. Minimal order untuk produk ini adalah ${item.minPesan}.`);
+    newQty = item.minPesan; // Reset ke minimal pesan
+  }
+  item.qty = newQty;
   updateCartUI();
 }
 
@@ -329,13 +365,13 @@ function updateCartUI() {
     <div class="ledger-row col-keranjang">
       <span style="font-weight:600;">${c.nama}</span>
       <span class="mono">${formatRupiah(c.harga)}</span>
-      <span style="display:flex; gap:10px; align-items:center;">
-        <button class="btn btn-ghost" style="padding:2px 8px;" onclick="ubahQty(${i}, -1)">-</button>
-        <span class="mono">${c.qty}</span>
-        <button class="btn btn-ghost" style="padding:2px 8px;" onclick="ubahQty(${i}, 1)">+</button>
+      <span style="display:flex; gap:5px; align-items:center;">
+        <button class="btn btn-ghost" style="padding:2px 8px;" onclick="ubahQtyBtn(${i}, -1)">-</button>
+        <input type="number" class="qty-input" value="${c.qty}" onchange="ketikQty(${i}, this.value)">
+        <button class="btn btn-ghost" style="padding:2px 8px;" onclick="ubahQtyBtn(${i}, 1)">+</button>
       </span>
       <span class="mono" style="color:var(--copper-dark); font-weight:600;">${formatRupiah(sub)}</span>
-      <span><button class="btn btn-danger" style="padding:4px 8px;" onclick="ubahQty(${i}, -9999)">Hapus</button></span>
+      <span><button class="btn btn-danger" style="padding:4px 8px;" onclick="ubahQtyBtn(${i}, -9999)">Hapus</button></span>
     </div>
   `}).join("");
   
@@ -344,7 +380,6 @@ function updateCartUI() {
 }
 
 /* ---------------- 4. CHECKOUT (CREATE MAIN ORDER) ---------------- */
-// Fungsi untuk mencatat Audit Trail
 async function recordOrderHistory(orderId, note) {
   await push(ref(db, `order_updates/${orderId}`), {
     waktu: serverTimestamp(),
@@ -355,13 +390,19 @@ async function recordOrderHistory(orderId, note) {
 
 document.getElementById("btnCheckout").addEventListener("click", async () => {
   if(cart.length === 0) return;
+  
+  const tglKirimVal = document.getElementById("tglKirim").value;
+  if(!tglKirimVal){
+    toast("Mohon tentukan Tanggal Tempo Pengiriman.");
+    return;
+  }
+
   const btn = document.getElementById("btnCheckout");
   btn.disabled = true; btn.textContent = "Memproses...";
 
   try {
     let totalPrice = cart.reduce((sum, item) => sum + (item.harga * item.qty), 0);
     
-    // Konversi array cart ke object Firebase
     let itemsObj = {};
     cart.forEach(c => { itemsObj[c.productId] = c; });
 
@@ -371,28 +412,28 @@ document.getElementById("btnCheckout").addEventListener("click", async () => {
       buyerName: userData.nama,
       buyerPerusahaan: userData.perusahaan || "-",
       totalHarga: totalPrice,
-      status: "Pesanan Dibuat", // Status Utama
+      tglPengiriman: tglKirimVal, // <--- Simpan tanggal
+      status: "Pesanan Dibuat", 
       items: itemsObj,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
 
-    await recordOrderHistory(orderRef.key, "Pembeli membuat pesanan baru melalui sistem.");
+    await recordOrderHistory(orderRef.key, `Pesanan dibuat. Meminta pengiriman pada ${tglKirimVal}.`);
 
     cart = []; updateCartUI();
     toast("Berhasil Checkout!");
     
-    // Pindah ke tab pesanan
     document.querySelector('[data-tab="pesanan"]').click();
   } catch (err) {
     toast("Gagal checkout: " + err.message);
+  } finally {
     btn.disabled = false; btn.textContent = "Checkout Sekarang";
   }
 });
 
-/* ---------------- 5. PESANAN SAYA (MANAGEMENT & LOGIC) ---------------- */
+/* ---------------- 5. PESANAN SAYA & AUTO-KADALUARSA ---------------- */
 function loadMyOrders() {
-  // Jika Admin, bisa melihat semua. Jika pembeli, hanya miliknya.
   let q;
   if(userData.level === 'admin'){
     q = rtdbQuery(ref(db, "main_orders"));
@@ -403,16 +444,55 @@ function loadMyOrders() {
   onValue(q, (snapshot) => {
     myOrders = [];
     snapshot.forEach(child => { myOrders.push({ id: child.key, ...child.val() }); });
+    
+    // Sort & Check Kadaluarsa
+    cekKadaluarsaSistem();
+
     myOrders.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     renderMyOrders();
   });
 }
 
+function cekKadaluarsaSistem() {
+  const sekarang = new Date();
+  
+  myOrders.forEach(async (order) => {
+    // Daftar status aman / sudah selesai / sudah batal
+    const statusAman = ["Pesanan Selesai Lunas", "Pesanan Selesai Belum Bayar", "Selesai", "Kadaluarsa", "Dibatalkan Pembeli", "Dibatalkan"];
+    
+    // Jika status saat ini BUKAN status aman, cek tanggalnya
+    if (!statusAman.includes(order.status) && order.tglPengiriman) {
+      
+      const batasWaktu = new Date(order.tglPengiriman);
+      // Set jam ke 23:59:59 di hari H (Batas akhir hari tersebut)
+      batasWaktu.setHours(23, 59, 59, 999); 
+      
+      // Jika waktu sekarang melebihi akhir hari dari tempo pengiriman
+      if (sekarang.getTime() > batasWaktu.getTime()) {
+        try {
+          // Update status otomatis menjadi Kadaluarsa di Firebase
+          await update(ref(db, `main_orders/${order.id}`), { 
+            status: "Kadaluarsa", 
+            updatedAt: serverTimestamp() 
+          });
+          
+          await recordOrderHistory(order.id, "Sistem Otomatis: Pesanan dibatalkan karena telah melewati batas tempo pengiriman dan belum diselesaikan.");
+          
+          // Update status di lokal array agar langsung tereflek
+          order.status = "Kadaluarsa"; 
+        } catch (err) {
+          console.error("Gagal update status kadaluarsa:", err);
+        }
+      }
+    }
+  });
+}
+
 function getStatusColor(status) {
-  if(status.includes("Batal") || status.includes("Ditolak")) return "background:var(--danger); color:#fff;";
+  if(status.includes("Batal") || status.includes("Ditolak") || status.includes("Kadaluarsa")) return "background:var(--danger); color:#fff;";
   if(status.includes("Lunas") || status.includes("Selesai") || status.includes("Diterima Supplier")) return "background:var(--ok); color:#fff;";
   if(status.includes("Terkirim") || status.includes("Proses")) return "background:var(--info); color:#fff;";
-  return "background:var(--warning); color:#fff;"; // Pending
+  return "background:var(--warning); color:#fff;";
 }
 
 function renderMyOrders() {
@@ -422,17 +502,15 @@ function renderMyOrders() {
   }
 
   container.innerHTML = myOrders.map(order => {
-    // Breakdown Items
     const items = order.items ? Object.values(order.items) : [];
     
-    // Cek apakah ada minimal 1 item yang sudah di accept supplier (untuk logika Lanjutkan Order)
     const hasProcessedItem = items.some(i => i.status === "Pesanan Diterima Supplier");
     const isPending = order.status === "Pesanan Dibuat" || order.status === "Di Proses Admin";
     
     let itemsHtml = items.map(i => {
       let cssClass = "item-status-pending";
       if(i.status === "Pesanan Diterima Supplier") cssClass = "item-status-ok";
-      if(i.status === "Dibatalkan") cssClass = "item-status-cancel";
+      if(i.status === "Dibatalkan" || i.status.includes("Batal")) cssClass = "item-status-cancel";
       
       return `
         <div class="order-item ${cssClass}">
@@ -445,7 +523,6 @@ function renderMyOrders() {
       `;
     }).join("");
 
-    // Tombol Logika (Lanjutkan vs Batalkan)
     let actionButtons = "";
     if(isPending) {
       if(hasProcessedItem) {
@@ -454,12 +531,16 @@ function renderMyOrders() {
       actionButtons += `<button class="btn btn-danger" onclick="batalkanOrder('${order.id}')">Batalkan Semua</button>`;
     }
 
+    // Format tampilan tanggal tempo
+    let strTempo = order.tglPengiriman ? new Date(order.tglPengiriman).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'}) : "-";
+
     return `
       <div class="card">
         <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px dashed var(--line); padding-bottom:10px;">
           <div>
             <h4 class="mono" style="margin:0 0 5px; color:var(--navy);">ID: #${order.id.slice(0,8).toUpperCase()}</h4>
-            <div style="font-size:12px; color:var(--slate);">${formatDate(order.createdAt)}</div>
+            <div style="font-size:12px; color:var(--slate);">Waktu Pesan: ${formatDate(order.createdAt)}</div>
+            <div style="font-size:12px; color:var(--danger); font-weight:600; margin-top:2px;">Tempo Kirim: ${strTempo}</div>
           </div>
           <div style="text-align:right;">
             <div class="status-badge" style="${getStatusColor(order.status)}">${order.status}</div>
@@ -493,7 +574,6 @@ window.batalkanOrder = async function(orderId) {
   try {
     const order = myOrders.find(o => o.id === orderId);
     let itemsUpdate = {};
-    // Ubah semua status barang di dalam order
     for(let key in order.items) {
       itemsUpdate[`items/${key}/status`] = "Dibatalkan";
     }
@@ -506,10 +586,9 @@ window.batalkanOrder = async function(orderId) {
   } catch (err) { toast("Gagal membatalkan: " + err.message); }
 }
 
-// Logika Lanjutkan (Parsial / Drop yang belum di proses)
+// Logika Lanjutkan (Parsial)
 window.lanjutkanOrder = async function(orderId) {
   if(!confirm("Lanjutkan hanya dengan barang yang sudah diproses supplier? Barang lain akan otomatis dibatalkan.")) return;
-  
   try {
     const order = myOrders.find(o => o.id === orderId);
     let itemsUpdate = {};
@@ -518,7 +597,7 @@ window.lanjutkanOrder = async function(orderId) {
     for(let key in order.items) {
       const item = order.items[key];
       if(item.status === "Pesanan Diterima Supplier") {
-        itemsUpdate[`items/${key}/status`] = "Dalam Proses Pengiriman"; // Lanjut ke tahap berikutnya
+        itemsUpdate[`items/${key}/status`] = "Dalam Proses Pengiriman"; 
         newTotal += (item.harga * item.qty);
       } else {
         itemsUpdate[`items/${key}/status`] = "Dibatalkan Otomatis (Checkout Parsial)";
@@ -560,10 +639,13 @@ window.cetakNota = function(orderId) {
   doc.setTextColor(0,0,0);
   doc.text("INVOICE / NOTA PESANAN", 14, 40);
   
+  let strTempo = order.tglPengiriman ? new Date(order.tglPengiriman).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'}) : "-";
+
   doc.setFontSize(10);
   doc.text(`ID Pesanan : #${order.id.toUpperCase()}`, 14, 48);
   doc.text(`Tanggal    : ${formatDate(order.createdAt)}`, 14, 53);
-  doc.text(`Status     : ${order.status}`, 14, 58);
+  doc.text(`Tempo Kirim: ${strTempo}`, 14, 58);
+  doc.text(`Status     : ${order.status}`, 14, 63);
   
   doc.text(`Pemesan    : ${order.buyerName}`, 120, 48);
   doc.text(`Perusahaan : ${order.buyerPerusahaan}`, 120, 53);
@@ -577,7 +659,7 @@ window.cetakNota = function(orderId) {
     tableRows.push([
       index + 1,
       item.nama,
-      item.status, // Sangat informatif melihat barang mana yang batal/lanjut
+      item.status,
       formatRupiah(item.harga),
       item.qty.toString(),
       formatRupiah(item.harga * item.qty)
@@ -585,24 +667,21 @@ window.cetakNota = function(orderId) {
   });
 
   doc.autoTable({
-    startY: 65,
+    startY: 70,
     head: tableHeaders,
     body: tableRows,
     theme: 'grid',
     headStyles: { fillColor: [11, 30, 51] }
   });
 
-  // Total Akhir (Sesuai dengan penyesuaian jika ada pembatalan)
   let finalY = doc.lastAutoTable.finalY + 10;
   doc.setFontSize(14);
   doc.text(`TOTAL PEMBAYARAN: ${formatRupiah(order.totalHarga)}`, 14, finalY);
 
-  // Footer Disclaimer
   doc.setFontSize(9);
   doc.setTextColor(100,100,100);
-  doc.text("*Dokumen ini dihasilkan secara otomatis oleh sistem NG Supply dan sah tanpa tanda tangan basah.", 14, finalY + 15);
+  doc.text("*Dokumen ini dihasilkan secara otomatis oleh sistem NG Supply dan sah tanpa tanda tangan.", 14, finalY + 15);
   
-  // Eksekusi Download Manual
   doc.save(`Invoice_NG_${order.id.slice(0,6)}.pdf`);
   toast("Nota PDF berhasil diunduh.");
 }
