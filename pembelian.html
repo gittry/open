@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Pembeli | NG Supply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- jsPDF untuk Nota PDF Profesional -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+  :root{
+    --navy:#0B1E33; --steel:#16324F; --paper:#F2EEE4; --paper-dim:#E7E1D2;
+    --copper:#C97C2C; --copper-dark:#A5621E; --slate:#4B5563; --ink:#1B2430;
+    --line:#C9BFA6; --ok:#3F6B4F; --warning:#D97706; --danger:#9C3B2E; --info:#2563EB;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif;
+    background-image: linear-gradient(var(--paper-dim) 1px, transparent 1px), linear-gradient(90deg, var(--paper-dim) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.03em;}
+
+  header.topbar{
+    background:var(--navy); color:var(--paper); padding:16px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:3px solid var(--copper); position:sticky; top:0; z-index:50;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{
+    width:42px; height:42px; border:2px solid var(--copper); border-radius:4px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; color:var(--copper); transform:rotate(-2deg);
+  }
+  .brand-text .display{font-size:19px; font-weight:600; line-height:1.1; color:#fff;}
+  .brand-text .tag{font-size:11px; letter-spacing:.18em; color:var(--copper); font-family:'JetBrains Mono',monospace;}
+
+  .btn{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+    padding:8px 14px; border-radius:3px; border:1px solid transparent; cursor:pointer;
+    transition:transform .12s ease;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-copper{background:var(--copper); color:#fff; border-color:var(--copper-dark);}
+  .btn-copper:hover{background:var(--copper-dark);}
+  .btn-outline{background:transparent; color:var(--paper); border-color:rgba(242,238,228,.4);}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--ink);}
+  .btn-danger{background:transparent; border:1px solid var(--danger); color:var(--danger);}
+  .btn-ok{background:var(--ok); color:#fff;}
+
+  .user-chip{display:flex; align-items:center; gap:8px; font-size:13px;}
+  .user-chip img{width:30px; height:30px; border-radius:50%; border:2px solid var(--copper);}
+
+  .tabs-wrap{max-width:1100px; margin:30px auto 10px; padding:0 28px;}
+  .tabs{display:flex; gap:14px; flex-wrap:wrap;}
+  .tab-stamp{
+    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.08em;
+    font-size:14px; font-weight:600; padding:12px 26px;
+    border:2px dashed var(--line); border-radius:4px; background:transparent; color:var(--slate); cursor:pointer;
+    transform:rotate(-1deg); transition:all .15s ease;
+  }
+  .tab-stamp:nth-child(even){transform:rotate(1deg);}
+  .tab-stamp.active{border-style:solid; border-color:var(--copper); color:var(--copper-dark); background:#fff; box-shadow:2px 2px 0 var(--copper); transform:rotate(0);}
+
+  main{max-width:1100px; margin:0 auto; padding:20px 28px 80px;}
+  .panel{display:none;} .panel.active{display:block;}
+
+  /* Tables */
+  .ledger{border:1px solid var(--line); border-radius:5px; background:#fff; overflow:hidden;}
+  .ledger-head{
+    display:grid; gap:8px; padding:12px 18px; background:var(--navy); color:var(--paper);
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  }
+  .ledger-row{
+    display:grid; gap:8px; padding:14px 18px; align-items:center;
+    border-top:1px dashed var(--line); font-size:13.5px;
+  }
+  .ledger-row:hover{background:#FBF8EF;}
+  .jenis-badge{display:inline-block; font-size:11px; padding:3px 8px; border-radius:10px; background:var(--paper-dim); color:var(--slate); font-family:'JetBrains Mono',monospace;}
+  .status-badge{font-size:11px; padding:4px 8px; border-radius:4px; font-weight:600; display:inline-block;}
+  .ledger-empty{padding:30px; text-align:center; color:var(--slate); font-size:14px;}
+
+  /* Grid Layouts */
+  .col-katalog{grid-template-columns: 2fr 1fr 1fr 1fr .8fr auto;}
+  .col-keranjang{grid-template-columns: 2fr 1.5fr 1fr 1fr auto;}
+  .col-order{grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr auto;}
+
+  .card{background:#fff; border:1px solid var(--line); border-radius:5px; padding:22px; margin-bottom:20px;}
+  .card h3{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.05em; margin:0 0 16px; color:var(--navy); border-bottom:2px solid var(--copper); padding-bottom:8px;}
+
+  /* Order Detail List */
+  .order-item{padding:10px; border:1px dashed var(--line); margin-bottom:8px; border-radius:4px; display:flex; justify-content:space-between; background:#fafafa;}
+  .item-status-pending{border-left:4px solid var(--warning);}
+  .item-status-ok{border-left:4px solid var(--ok); background:#f0fdf4;}
+  .item-status-cancel{border-left:4px solid var(--danger); background:#fef2f2;}
+
+  .toast{position:fixed; bottom:22px; right:22px; background:var(--navy); color:#fff; padding:12px 18px; border-radius:4px; border-left:4px solid var(--copper); font-size:13.5px; z-index:200; opacity:0; transform:translateY(10px); transition:all .25s ease;}
+  .toast.show{opacity:1; transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">NG</div>
+    <div class="brand-text">
+      <div class="display">Novastra Global Supply</div>
+      <div class="tag">B2B BUYER PORTAL</div>
+    </div>
+  </div>
+  <div class="auth-area" id="authArea"></div>
+</header>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab-stamp active" data-tab="katalog">Katalog Produk</button>
+    <button class="tab-stamp" data-tab="keranjang">🛒 Keranjang (<span id="cartCount">0</span>)</button>
+    <button class="tab-stamp" data-tab="pesanan">Pesanan Saya</button>
+  </div>
+</div>
+
+<main>
+  <!-- PANEL 1: KATALOG (Tanpa Info Supplier) -->
+  <section class="panel active" id="panel-katalog">
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:15px 22px;">
+      <h3 style="border:none; margin:0; padding:0;">Telusuri Kebutuhan Anda</h3>
+      <input type="text" id="searchInput" placeholder="Cari produk..." style="padding:8px 12px; width:300px; border:1px solid var(--line); border-radius:4px;">
+    </div>
+
+    <div class="ledger">
+      <div class="ledger-head col-katalog">
+        <div>Nama Produk</div><div>Jenis</div><div>Harga / Unit</div><div>Stok Tersedia</div><div>Min Order</div><div>Aksi</div>
+      </div>
+      <div id="katalogList"><div class="ledger-empty">Memuat katalog...</div></div>
+    </div>
+  </section>
+
+  <!-- PANEL 2: KERANJANG -->
+  <section class="panel" id="panel-keranjang">
+    <div class="ledger" style="margin-bottom:20px;">
+      <div class="ledger-head col-keranjang">
+        <div>Produk</div><div>Harga Satuan</div><div>Qty (Jumlah)</div><div>Subtotal</div><div>Aksi</div>
+      </div>
+      <div id="keranjangList"><div class="ledger-empty">Keranjang Anda masih kosong.</div></div>
+    </div>
+
+    <div class="card" style="text-align:right;">
+      <p style="font-size:14px; color:var(--slate); margin:0 0 5px;">Total Estimasi Pembayaran:</p>
+      <h2 class="mono" style="margin:0 0 20px; color:var(--navy); font-size:28px;" id="cartTotal">Rp 0</h2>
+      <button class="btn btn-copper" style="padding:12px 24px; font-size:16px;" id="btnCheckout">Checkout Sekarang</button>
+    </div>
+  </section>
+
+  <!-- PANEL 3: PESANAN SAYA -->
+  <section class="panel" id="panel-pesanan">
+    <div id="ordersContainer">
+      <!-- Diisi oleh JS: List Order Utama -->
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* =======================================================================
+   ⚙️  KONFIGURASI FIREBASE
+   ======================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDXXnEyXgnzZqrBiTOkW47kAuV7MyzQ4EM",
+  authDomain: "nodemcu-91530.firebaseapp.com",
+  databaseURL: "https://nodemcu-91530-default-rtdb.firebaseio.com",
+  projectId: "nodemcu-91530",
+  storageBucket: "nodemcu-91530.appspot.com",
+  messagingSenderId: "113192658909",
+  appId: "1:113192658909:web:ed5ae18fa4d708faa2f834"
+};
+/* ======================================================================= */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getDatabase, ref, get, push, update, onValue, query as rtdbQuery, orderByChild, equalTo, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app); 
+
+let currentUser = null;
+let userData = null;
+let allProducts = [];
+let cart = []; // Array of { productId, nama, harga, qty, supplierUid, minPesan }
+let myOrders = [];
+
+// Utilitas
+function toast(msg){
+  const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 3000);
+}
+function formatRupiah(n){ return "Rp " + Number(n||0).toLocaleString("id-ID"); }
+function formatDate(ts){
+  if(!ts) return "-";
+  return new Date(ts).toLocaleString("id-ID", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+}
+
+// Navigasi Tab
+document.querySelectorAll(".tab-stamp").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab-stamp").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(`panel-${btn.dataset.tab}`).classList.add("active");
+  });
+});
+
+/* ---------------- 1. AUTHENTICATION & ACCESS CONTROL ---------------- */
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    const userSnap = await get(ref(db, `users/${user.uid}`));
+    if(userSnap.exists()){
+      userData = userSnap.val();
+      // OTORISASI: Hanya Pembeli & Admin yang boleh masuk
+      if(userData.level === 'pembeli' || userData.level === 'admin') {
+        currentUser = user;
+        document.getElementById("authArea").innerHTML = `
+          <div class="user-chip"><img src="${user.photoURL || 'https://via.placeholder.com/30'}" alt="">
+          <span>${user.displayName || userData.nama}</span></div>
+          <button class="btn btn-outline" id="logoutBtn">Keluar</button>
+        `;
+        loadProducts();
+        loadMyOrders();
+      } else {
+        alert("Akses Ditolak. Halaman ini khusus Pembeli.");
+        window.location.href = 'index.html';
+      }
+    } else { window.location.href = 'index.html'; }
+  } else { window.location.href = 'index.html'; }
+});
+document.addEventListener('click', (e) => { if (e.target.id === 'logoutBtn') signOut(auth); });
+
+/* ---------------- 2. KATALOG PRODUK (HIDES SUPPLIER) ---------------- */
+function loadProducts() {
+  onValue(ref(db, "products"), (snapshot) => {
+    allProducts = [];
+    snapshot.forEach(child => { allProducts.push({ id: child.key, ...child.val() }); });
+    renderKatalog();
+  });
+}
+
+function renderKatalog() {
+  const wrap = document.getElementById("katalogList");
+  const search = document.getElementById("searchInput").value.toLowerCase();
+  
+  let filtered = allProducts.filter(p => p.nama.toLowerCase().includes(search));
+  
+  if(filtered.length === 0){
+    wrap.innerHTML = `<div class="ledger-empty">Tidak ada produk.</div>`; return;
+  }
+
+  // PERHATIKAN: Tidak ada pemanggilan nama/alamat supplier di sini.
+  wrap.innerHTML = filtered.map(p=>`
+    <div class="ledger-row col-katalog">
+      <span style="font-weight:600; color:var(--navy);">${p.nama}</span>
+      <span><span class="jenis-badge">${p.jenis}</span></span>
+      <span class="mono" style="color:var(--copper-dark); font-weight:600;">${formatRupiah(p.harga)}</span>
+      <span class="mono">${p.jumlah}</span>
+      <span class="mono">Min. ${p.minPesan}</span>
+      <span>
+        <button class="btn btn-ghost" style="padding:6px 12px;" onclick="addToCart('${p.id}')">+ Keranjang</button>
+      </span>
+    </div>
+  `).join("");
+}
+document.getElementById("searchInput").addEventListener("input", renderKatalog);
+
+/* ---------------- 3. LOGIKA KERANJANG (CART) ---------------- */
+window.addToCart = function(productId) {
+  const prod = allProducts.find(p => p.id === productId);
+  if(!prod) return;
+  
+  const existing = cart.find(c => c.productId === productId);
+  if(existing){
+    existing.qty += 1;
+    toast("Jumlah produk ditambahkan di keranjang.");
+  } else {
+    cart.push({
+      productId: prod.id,
+      nama: prod.nama,
+      harga: prod.harga,
+      qty: prod.minPesan, // Mulai dari minimal pesan
+      supplierUid: prod.supplierUid, // Disimpan diam-diam untuk backend
+      minPesan: prod.minPesan,
+      status: "Di Proses Admin" // Status awal per item
+    });
+    toast("Produk masuk ke keranjang.");
+  }
+  updateCartUI();
+}
+
+window.ubahQty = function(index, delta) {
+  const item = cart[index];
+  const newQty = item.qty + delta;
+  if(newQty < item.minPesan) {
+    if(confirm("Hapus barang ini dari keranjang?")) cart.splice(index, 1);
+  } else {
+    item.qty = newQty;
+  }
+  updateCartUI();
+}
+
+function updateCartUI() {
+  document.getElementById("cartCount").textContent = cart.length;
+  const wrap = document.getElementById("keranjangList");
+  
+  if(cart.length === 0){
+    wrap.innerHTML = `<div class="ledger-empty">Keranjang Anda masih kosong.</div>`;
+    document.getElementById("cartTotal").textContent = "Rp 0";
+    document.getElementById("btnCheckout").disabled = true;
+    return;
+  }
+
+  let total = 0;
+  wrap.innerHTML = cart.map((c, i) => {
+    let sub = c.harga * c.qty; total += sub;
+    return `
+    <div class="ledger-row col-keranjang">
+      <span style="font-weight:600;">${c.nama}</span>
+      <span class="mono">${formatRupiah(c.harga)}</span>
+      <span style="display:flex; gap:10px; align-items:center;">
+        <button class="btn btn-ghost" style="padding:2px 8px;" onclick="ubahQty(${i}, -1)">-</button>
+        <span class="mono">${c.qty}</span>
+        <button class="btn btn-ghost" style="padding:2px 8px;" onclick="ubahQty(${i}, 1)">+</button>
+      </span>
+      <span class="mono" style="color:var(--copper-dark); font-weight:600;">${formatRupiah(sub)}</span>
+      <span><button class="btn btn-danger" style="padding:4px 8px;" onclick="ubahQty(${i}, -9999)">Hapus</button></span>
+    </div>
+  `}).join("");
+  
+  document.getElementById("cartTotal").textContent = formatRupiah(total);
+  document.getElementById("btnCheckout").disabled = false;
+}
+
+/* ---------------- 4. CHECKOUT (CREATE MAIN ORDER) ---------------- */
+// Fungsi untuk mencatat Audit Trail
+async function recordOrderHistory(orderId, note) {
+  await push(ref(db, `order_updates/${orderId}`), {
+    waktu: serverTimestamp(),
+    keterangan: note,
+    actor: userData.nama
+  });
+}
+
+document.getElementById("btnCheckout").addEventListener("click", async () => {
+  if(cart.length === 0) return;
+  const btn = document.getElementById("btnCheckout");
+  btn.disabled = true; btn.textContent = "Memproses...";
+
+  try {
+    let totalPrice = cart.reduce((sum, item) => sum + (item.harga * item.qty), 0);
+    
+    // Konversi array cart ke object Firebase
+    let itemsObj = {};
+    cart.forEach(c => { itemsObj[c.productId] = c; });
+
+    const orderRef = push(ref(db, "main_orders"));
+    await update(orderRef, {
+      buyerUid: currentUser.uid,
+      buyerName: userData.nama,
+      buyerPerusahaan: userData.perusahaan || "-",
+      totalHarga: totalPrice,
+      status: "Pesanan Dibuat", // Status Utama
+      items: itemsObj,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    await recordOrderHistory(orderRef.key, "Pembeli membuat pesanan baru melalui sistem.");
+
+    cart = []; updateCartUI();
+    toast("Berhasil Checkout!");
+    
+    // Pindah ke tab pesanan
+    document.querySelector('[data-tab="pesanan"]').click();
+  } catch (err) {
+    toast("Gagal checkout: " + err.message);
+    btn.disabled = false; btn.textContent = "Checkout Sekarang";
+  }
+});
+
+/* ---------------- 5. PESANAN SAYA (MANAGEMENT & LOGIC) ---------------- */
+function loadMyOrders() {
+  // Jika Admin, bisa melihat semua. Jika pembeli, hanya miliknya.
+  let q;
+  if(userData.level === 'admin'){
+    q = rtdbQuery(ref(db, "main_orders"));
+  } else {
+    q = rtdbQuery(ref(db, "main_orders"), orderByChild("buyerUid"), equalTo(currentUser.uid));
+  }
+
+  onValue(q, (snapshot) => {
+    myOrders = [];
+    snapshot.forEach(child => { myOrders.push({ id: child.key, ...child.val() }); });
+    myOrders.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    renderMyOrders();
+  });
+}
+
+function getStatusColor(status) {
+  if(status.includes("Batal") || status.includes("Ditolak")) return "background:var(--danger); color:#fff;";
+  if(status.includes("Lunas") || status.includes("Selesai") || status.includes("Diterima Supplier")) return "background:var(--ok); color:#fff;";
+  if(status.includes("Terkirim") || status.includes("Proses")) return "background:var(--info); color:#fff;";
+  return "background:var(--warning); color:#fff;"; // Pending
+}
+
+function renderMyOrders() {
+  const container = document.getElementById("ordersContainer");
+  if(myOrders.length === 0){
+    container.innerHTML = `<div class="card"><div class="ledger-empty">Belum ada riwayat pesanan.</div></div>`; return;
+  }
+
+  container.innerHTML = myOrders.map(order => {
+    // Breakdown Items
+    const items = order.items ? Object.values(order.items) : [];
+    
+    // Cek apakah ada minimal 1 item yang sudah di accept supplier (untuk logika Lanjutkan Order)
+    const hasProcessedItem = items.some(i => i.status === "Pesanan Diterima Supplier");
+    const isPending = order.status === "Pesanan Dibuat" || order.status === "Di Proses Admin";
+    
+    let itemsHtml = items.map(i => {
+      let cssClass = "item-status-pending";
+      if(i.status === "Pesanan Diterima Supplier") cssClass = "item-status-ok";
+      if(i.status === "Dibatalkan") cssClass = "item-status-cancel";
+      
+      return `
+        <div class="order-item ${cssClass}">
+          <div><span style="font-weight:600;">${i.nama}</span> (x${i.qty})</div>
+          <div style="text-align:right;">
+            <div class="mono" style="color:var(--copper-dark);">${formatRupiah(i.harga * i.qty)}</div>
+            <div style="font-size:11px; color:var(--slate);">Status Barang: <b>${i.status}</b></div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // Tombol Logika (Lanjutkan vs Batalkan)
+    let actionButtons = "";
+    if(isPending) {
+      if(hasProcessedItem) {
+        actionButtons += `<button class="btn btn-ok" onclick="lanjutkanOrder('${order.id}')">Lanjutkan Pesanan (Drop yg belum diproses)</button> `;
+      }
+      actionButtons += `<button class="btn btn-danger" onclick="batalkanOrder('${order.id}')">Batalkan Semua</button>`;
+    }
+
+    return `
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px dashed var(--line); padding-bottom:10px;">
+          <div>
+            <h4 class="mono" style="margin:0 0 5px; color:var(--navy);">ID: #${order.id.slice(0,8).toUpperCase()}</h4>
+            <div style="font-size:12px; color:var(--slate);">${formatDate(order.createdAt)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="status-badge" style="${getStatusColor(order.status)}">${order.status}</div>
+            <h3 class="mono" style="margin:5px 0 0; color:var(--copper-dark);">${formatRupiah(order.totalHarga)}</h3>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:15px;">
+          <h5 style="margin:0 0 10px; font-size:12px; color:var(--slate); text-transform:uppercase;">Daftar Barang:</h5>
+          ${itemsHtml}
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; padding:12px; border-radius:4px;">
+          <div>
+            <button class="btn btn-outline" style="border-color:var(--copper); color:var(--copper-dark);" onclick="cetakNota('${order.id}')">
+              📄 Download Nota PDF
+            </button>
+          </div>
+          <div style="display:flex; gap:10px;">
+            ${actionButtons}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// Logika Pembatalan Penuh
+window.batalkanOrder = async function(orderId) {
+  if(!confirm("Anda yakin ingin membatalkan seluruh pesanan ini?")) return;
+  try {
+    const order = myOrders.find(o => o.id === orderId);
+    let itemsUpdate = {};
+    // Ubah semua status barang di dalam order
+    for(let key in order.items) {
+      itemsUpdate[`items/${key}/status`] = "Dibatalkan";
+    }
+    itemsUpdate["status"] = "Dibatalkan Pembeli";
+    itemsUpdate["updatedAt"] = serverTimestamp();
+
+    await update(ref(db, `main_orders/${orderId}`), itemsUpdate);
+    await recordOrderHistory(orderId, "Pembeli membatalkan seluruh pesanan.");
+    toast("Pesanan dibatalkan.");
+  } catch (err) { toast("Gagal membatalkan: " + err.message); }
+}
+
+// Logika Lanjutkan (Parsial / Drop yang belum di proses)
+window.lanjutkanOrder = async function(orderId) {
+  if(!confirm("Lanjutkan hanya dengan barang yang sudah diproses supplier? Barang lain akan otomatis dibatalkan.")) return;
+  
+  try {
+    const order = myOrders.find(o => o.id === orderId);
+    let itemsUpdate = {};
+    let newTotal = 0;
+
+    for(let key in order.items) {
+      const item = order.items[key];
+      if(item.status === "Pesanan Diterima Supplier") {
+        itemsUpdate[`items/${key}/status`] = "Dalam Proses Pengiriman"; // Lanjut ke tahap berikutnya
+        newTotal += (item.harga * item.qty);
+      } else {
+        itemsUpdate[`items/${key}/status`] = "Dibatalkan Otomatis (Checkout Parsial)";
+      }
+    }
+    
+    itemsUpdate["status"] = "Pesanan Dalam Proses";
+    itemsUpdate["totalHarga"] = newTotal;
+    itemsUpdate["updatedAt"] = serverTimestamp();
+
+    await update(ref(db, `main_orders/${orderId}`), itemsUpdate);
+    await recordOrderHistory(orderId, "Pembeli melakukan konfirmasi parsial. Menyesuaikan total harga.");
+    toast("Pesanan dilanjutkan dengan penyesuaian harga.");
+  } catch (err) { toast("Gagal: " + err.message); }
+}
+
+/* ---------------- 6. CETAK NOTA PROFESIONAL (jsPDF) ---------------- */
+window.cetakNota = function(orderId) {
+  const order = myOrders.find(o => o.id === orderId);
+  if(!order) return;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  // Kop Surat
+  doc.setFontSize(22);
+  doc.setTextColor(11, 30, 51);
+  doc.text("NOVASTRA GLOBAL SUPPLY", 14, 20);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(75, 85, 99);
+  doc.text("B2B Trading Platform", 14, 26);
+  
+  doc.setLineWidth(0.5);
+  doc.line(14, 30, 196, 30);
+
+  // Info Order
+  doc.setFontSize(12);
+  doc.setTextColor(0,0,0);
+  doc.text("INVOICE / NOTA PESANAN", 14, 40);
+  
+  doc.setFontSize(10);
+  doc.text(`ID Pesanan : #${order.id.toUpperCase()}`, 14, 48);
+  doc.text(`Tanggal    : ${formatDate(order.createdAt)}`, 14, 53);
+  doc.text(`Status     : ${order.status}`, 14, 58);
+  
+  doc.text(`Pemesan    : ${order.buyerName}`, 120, 48);
+  doc.text(`Perusahaan : ${order.buyerPerusahaan}`, 120, 53);
+
+  // Tabel Barang
+  const tableHeaders = [["No", "Nama Barang", "Status Sub-Order", "Harga Satuan", "Qty", "Subtotal"]];
+  const items = Object.values(order.items || {});
+  let tableRows = [];
+  
+  items.forEach((item, index) => {
+    tableRows.push([
+      index + 1,
+      item.nama,
+      item.status, // Sangat informatif melihat barang mana yang batal/lanjut
+      formatRupiah(item.harga),
+      item.qty.toString(),
+      formatRupiah(item.harga * item.qty)
+    ]);
+  });
+
+  doc.autoTable({
+    startY: 65,
+    head: tableHeaders,
+    body: tableRows,
+    theme: 'grid',
+    headStyles: { fillColor: [11, 30, 51] }
+  });
+
+  // Total Akhir (Sesuai dengan penyesuaian jika ada pembatalan)
+  let finalY = doc.lastAutoTable.finalY + 10;
+  doc.setFontSize(14);
+  doc.text(`TOTAL PEMBAYARAN: ${formatRupiah(order.totalHarga)}`, 14, finalY);
+
+  // Footer Disclaimer
+  doc.setFontSize(9);
+  doc.setTextColor(100,100,100);
+  doc.text("*Dokumen ini dihasilkan secara otomatis oleh sistem NG Supply dan sah tanpa tanda tangan basah.", 14, finalY + 15);
+  
+  // Eksekusi Download Manual
+  doc.save(`Invoice_NG_${order.id.slice(0,6)}.pdf`);
+  toast("Nota PDF berhasil diunduh.");
+}
+
+</script>
+</body>
+</html>
