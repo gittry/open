@@ -149,7 +149,7 @@
           <div class="ledger-head col-produk">
             <div>Nama Produk</div><div>Kategori</div><div>Harga</div><div>Stok / Min</div><div>Supplier</div><div>Opsi</div>
           </div>
-          <div id="adminProductsList"><div class="ledger-empty">Memuat...</div></div>
+          <div id="adminProductsList"><div class="ledger-empty">Memuat Katalog Produk...</div></div>
         </div>
 
         <div class="card" style="padding:15px 22px;">
@@ -201,12 +201,13 @@
       <div class="ledger-head" style="grid-template-columns: 1fr 1fr 1fr 3fr;">
         <div>Waktu</div><div>Pelaku</div><div>ID Pesanan</div><div>Keterangan Update</div>
       </div>
-      <div id="adminOrderUpdates"><div class="ledger-empty">Belum ada riwayat.</div></div>
+      <div id="adminOrderUpdates"><div class="ledger-empty">Belum ada riwayat update.</div></div>
     </div>
   </section>
 </main>
 
 <!-- MODALS -->
+<!-- Modal Edit Produk -->
 <div class="overlay" id="editProdModal">
   <div class="modal">
     <h3>Edit Produk</h3>
@@ -226,6 +227,7 @@
   </div>
 </div>
 
+<!-- Modal Cetak Data Produk -->
 <div class="overlay" id="printProdModal">
   <div class="modal">
     <h3>Cetak / Export PDF</h3>
@@ -245,6 +247,7 @@
   </div>
 </div>
 
+<!-- Modal Cetak Surat Jalan -->
 <div class="overlay" id="modalSuratJalan">
   <div class="modal">
     <h3>Cetak Surat Jalan (Pengiriman)</h3>
@@ -259,6 +262,7 @@
   </div>
 </div>
 
+<!-- Modal Cetak Nota Penagihan -->
 <div class="overlay" id="modalPenagihan">
   <div class="modal">
     <h3>Cetak Nota Penagihan</h3>
@@ -277,6 +281,7 @@
   </div>
 </div>
 
+<!-- Toast Notifikasi -->
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -302,18 +307,29 @@ let prodUpdates = [];
 let allOrders = [];
 let orderUpdates = [];
 
-// UI Utils
+/* --- FUNGSI UTILITIES GLOBAL --- */
 function toast(msg){
   const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"), 3000);
 }
+
 function formatRupiah(n){ return "Rp " + Number(n||0).toLocaleString("id-ID"); }
-function formatDateTime(ts){
+
+// PERBAIKAN FUNDAMENTAL: Fungsi Format Tanggal yang menyebabkan error "Memuat Alur Transaksi"
+function formatDate(ts){
   if(!ts) return "-";
-  return new Date(ts).toLocaleString("id-ID", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+  // Deteksi dan tangani timestamp maupun object date agar aman
+  const dateObj = (typeof ts === 'object' && ts instanceof Date) ? ts : new Date(ts);
+  return dateObj.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
 }
 
-// Tab Logic
+function formatDateTime(ts){
+  if(!ts) return "-";
+  const dateObj = (typeof ts === 'object' && ts instanceof Date) ? ts : new Date(ts);
+  return dateObj.toLocaleString("id-ID", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+}
+
+// Interaksi Tab Menu
 document.querySelectorAll(".tab-stamp").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     document.querySelectorAll(".tab-stamp").forEach(b=>b.classList.remove("active"));
@@ -358,6 +374,7 @@ function loadProducts() {
     renderProducts();
   });
 }
+
 function renderProducts() {
   const wrap = document.getElementById("adminProductsList");
   if(allProducts.length === 0){ wrap.innerHTML = `<div class="ledger-empty">Katalog kosong.</div>`; return; }
@@ -470,7 +487,7 @@ function loadProductUpdates() {
     snapshot.forEach(child => { prodUpdates.push({ id: child.key, ...child.val() }); });
     prodUpdates.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     const wrap = document.getElementById("adminProductUpdates");
-    if(prodUpdates.length === 0){ wrap.innerHTML = `<div class="ledger-empty">Belum ada riwayat.</div>`; return; }
+    if(prodUpdates.length === 0){ wrap.innerHTML = `<div class="ledger-empty">Belum ada riwayat update.</div>`; return; }
     wrap.innerHTML = prodUpdates.slice(0, 50).map(u => `
       <div class="ledger-row col-update" style="font-size:12px;">
         <span style="color:var(--slate);">${formatDateTime(u.timestamp)}</span>
@@ -486,6 +503,7 @@ window.openPrintProductModal = function() {
   document.getElementById("printProdModal").classList.add("active");
   window.updateSortOptions();
 }
+
 window.updateSortOptions = function() {
   const src = document.getElementById("printSource").value;
   const sBy = document.getElementById("printSortBy");
@@ -495,6 +513,7 @@ window.updateSortOptions = function() {
     sBy.innerHTML = `<option value="timestamp">Waktu (Tanggal)</option><option value="action">Aksi</option><option value="actor">Pelaku</option>`;
   }
 }
+
 window.executePrintProducts = function() {
   const source = document.getElementById("printSource").value;
   const sortKey = document.getElementById("printSortBy").value;
@@ -551,19 +570,19 @@ function loadOrders() {
   onValue(ref(db, "main_orders"), (snapshot) => {
     allOrders = [];
     snapshot.forEach(child => { allOrders.push({ id: child.key, ...child.val() }); });
-    renderOrdersGrouped(); // Render yang akan apply sorting & filtering
+    renderOrdersGrouped(); // Render ulang setelah load (dengan filter/sort)
   });
 }
 
 function getStatusBg(status) {
   if(status.includes("Batal") || status.includes("Kadaluarsa")) return "background:var(--danger);";
-  if(status.includes("Lunas") || status.includes("Selesai")) return "background:var(--ok);";
-  if(status.includes("Terkirim") || status.includes("Proses")) return "background:var(--info);";
-  if(status === "Pesanan Dibuat") return "background:var(--danger); font-size:12px;"; // Menandakan butuh aksi
+  if(status.includes("Lunas")) return "background:var(--ok);";
+  if(status.includes("Terkirim") || status.includes("Dalam Proses") || status.includes("Diproses") || status.includes("Diterima")) return "background:var(--info);";
+  if(status === "Pesanan Dibuat") return "background:var(--danger); font-size:12px;"; // Butuh Aksi
   return "background:var(--warning);";
 }
 
-// FUNGSI UTAMA: MENGELOMPOKKAN & RENDER CARD DENGAN PENCARIAN & SORTING
+// FUNGSI UTAMA RENDER PESANAN: Filter, Sort & Grouping
 window.renderOrdersGrouped = function() {
   const container = document.getElementById("statusSectionsContainer");
   const alertBox = document.getElementById("alertNewOrder");
@@ -574,9 +593,10 @@ window.renderOrdersGrouped = function() {
     return;
   }
 
-  // 1. Ambil input Pencarian dan Sorting
+  // 1. Logika Pencarian dan Pengurutan (Sorting)
   let filteredOrders = [...allOrders];
   const keyword = document.getElementById("searchOrder").value.toLowerCase();
+  
   if(keyword) {
     filteredOrders = filteredOrders.filter(o => 
       o.id.toLowerCase().includes(keyword) || 
@@ -593,7 +613,7 @@ window.renderOrdersGrouped = function() {
      if(sortMethod === 'priceAsc') return (a.totalHarga || 0) - (b.totalHarga || 0);
   });
 
-  // 2. Definisi Grup Status Fundamental
+  // 2. Definisi Grup Status Spesifik (Pisah per Tabel)
   const groups = [
     { title: "🚨 Pesanan Dibuat (Butuh Aksi WA)", keys: ["Pesanan Dibuat"] },
     { title: "⚙️ Pesanan Diproses Admin", keys: ["Pesanan Diproses Admin"] },
@@ -602,7 +622,7 @@ window.renderOrdersGrouped = function() {
     { title: "📫 Pesanan Terkirim", keys: ["Pesanan Terkirim"] },
     { title: "💳 Pesanan Selesai Belum Bayar", keys: ["Pesanan Selesai Belum Bayar"] },
     { title: "✅ Pesanan Selesai Lunas", keys: ["Pesanan Selesai Lunas"] },
-    { title: "❌ Dibatalkan / Kadaluarsa", keys: ["Dibatalkan Pembeli", "Dibatalkan Admin", "Kadaluarsa", "Dibatalkan"] }
+    { title: "❌ Dibatalkan Pembeli", keys: ["Dibatalkan Pembeli"] }
   ];
 
   let htmlContent = "";
@@ -618,7 +638,7 @@ window.renderOrdersGrouped = function() {
         <div class="status-section">
           <div class="section-title">
             <span>${group.title}</span>
-            <span class="section-badge">${ordersInGroup.length} Pesanan</span>
+            <span class="section-badge">${ordersInGroup.length} Transaksi</span>
           </div>
       `;
       ordersInGroup.forEach(order => { htmlContent += buildOrderCard(order); });
@@ -627,12 +647,12 @@ window.renderOrdersGrouped = function() {
   });
 
   if(htmlContent === "") {
-    htmlContent = `<div class="card"><div class="ledger-empty">Tidak ada pesanan yang cocok dengan pencarian Anda.</div></div>`;
+    htmlContent = `<div class="card"><div class="ledger-empty">Tidak ada pesanan yang cocok dengan kriteria pencarian Anda.</div></div>`;
   }
 
   container.innerHTML = htmlContent;
 
-  // Toggle Alert Notification
+  // Manajemen Alert Notification (Hanya muncul jika tidak sedang mencari spesifik)
   if(newOrderCount > 0 && !keyword) {
     alertBox.style.display = "flex";
     document.getElementById("alertNewOrderText").innerHTML = `Terdapat <b>${newOrderCount} pesanan baru</b> (Status: "Pesanan Dibuat"). Segera klik tombol WhatsApp pada kartu pesanan untuk meneruskan order ke supplier.`;
@@ -644,6 +664,7 @@ window.renderOrdersGrouped = function() {
 function buildOrderCard(order) {
   const items = order.items ? Object.values(order.items) : [];
   
+  // Klasifikasi Item ke Supplier (Khusus fitur tombol WA)
   let supGroups = {};
   for(let key in order.items) {
     const it = order.items[key];
@@ -653,7 +674,7 @@ function buildOrderCard(order) {
   }
 
   let supplierWAPanel = "";
-  // TOMBOL WA HANYA DI "Pesanan Dibuat"
+  // TOMBOL WA HANYA MUNCUL DI "Pesanan Dibuat"
   if(order.status === "Pesanan Dibuat") {
     supplierWAPanel = `<div style="background:#FEF2F2; border:1px dashed var(--danger); padding:12px; border-radius:4px; margin-bottom:15px;">
       <h5 style="margin:0 0 10px; color:var(--danger);"><span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">campaign</span> Tindakan Wajib: Teruskan Pesanan ke Supplier</h5>`;
@@ -697,7 +718,7 @@ function buildOrderCard(order) {
     </div>`;
   }).join("");
 
-  // Dynamic Action Buttons (PDF)
+  // Tombol Cetak Dokumen Dinamis
   let dynamicBtns = "";
   if(order.status === "Pesanan Dalam Proses") {
     dynamicBtns = `<button class="btn btn-info" onclick="bukaModalSuratJalan('${order.id}')"><span class="material-symbols-rounded" style="font-size:16px;">local_shipping</span> Cetak Surat Jalan</button>`;
@@ -713,6 +734,7 @@ function buildOrderCard(order) {
     "Pesanan Dalam Proses", "Pesanan Terkirim", "Pesanan Selesai Belum Bayar", 
     "Pesanan Selesai Lunas", "Dibatalkan Pembeli"
   ];
+  
   let dropdown = `<select class="mono" style="padding:6px; font-size:12px; width:auto; border-color:var(--copper); background:#fff; margin-top:8px;" onchange="manualStatusUpdate('${order.id}', this.value)">`;
   dropdown += `<option value="" disabled selected>Ubah Status Manual ⚙️</option>`;
   statusOptions.forEach(opt => {
@@ -727,7 +749,7 @@ function buildOrderCard(order) {
           <h4 class="mono" style="margin:0 0 5px; color:var(--navy);">ID: #${order.id.slice(0,8).toUpperCase()}</h4>
           <div style="font-size:12px; color:var(--slate);">
             Pembeli: <b>${order.buyerName}</b> (${order.buyerPerusahaan})<br>
-            Waktu Pesan: ${formatDate(order.createdAt)} | Tempo Kirim: ${order.tglPengiriman ? new Date(order.tglPengiriman).toLocaleDateString('id-ID') : '-'}
+            Waktu Pesan: ${formatDate(order.createdAt)} | Tempo Kirim: ${order.tglPengiriman ? formatDate(order.tglPengiriman) : '-'}
           </div>
         </div>
         <div style="text-align:right;">
@@ -753,22 +775,22 @@ function buildOrderCard(order) {
 
 /* --- LOGIKA PERUBAHAN STATUS ORDER --- */
 
-// Tombol WA & Auto Update Status -> Pesanan Diproses Admin
+// Tombol WA -> Otomatis ke "Pesanan Diproses Admin"
 window.forwardToSupplier = async function(orderId, supplierUid, waUrl, itemKeys) {
-  window.open(waUrl, '_blank'); // Buka WhatsApp
+  window.open(waUrl, '_blank'); 
   
   try {
     const order = allOrders.find(o => o.id === orderId);
     let itemsUpdate = {};
     let allForwarded = true;
 
-    // Ubah sub-order spesifik supplier ini
+    // Update status spesifik sub-order item
     itemKeys.forEach(key => { itemsUpdate[`items/${key}/status`] = "Pesanan Diproses Admin"; });
     
-    // Check apakah dengan update ini SEMUA item dalam order sudah minimal "Pesanan Diproses Admin"
+    // Validasi apabila order memuat banyak supplier, cek apa semuanya sudah di-WA
     for(let key in order.items) {
       if(!itemKeys.includes(key) && order.items[key].status === "Pesanan Dibuat") {
-        allForwarded = false; // Masih ada supplier lain yg belum di-WA
+        allForwarded = false; 
       }
     }
     
@@ -779,24 +801,24 @@ window.forwardToSupplier = async function(orderId, supplierUid, waUrl, itemKeys)
 
     await update(ref(db, `main_orders/${orderId}`), itemsUpdate);
     await logOrder(orderId, `Admin meneruskan pesanan via WA. Sub-order maju menjadi Pesanan Diproses Admin.`);
-    toast("Status barang supplier berhasil dimajukan.");
+    toast("Status pesanan otomatis dimajukan ke 'Diproses Admin'.");
   } catch(err) { toast("Gagal update otomatis: " + err.message); }
 }
 
-// Manual Status Update (Override)
+// Override Manual
 window.manualStatusUpdate = async function(orderId, newStatus) {
   if(!confirm(`Yakin mengubah status utama pesanan secara paksa menjadi: ${newStatus}?`)) {
-    loadOrders(); // Reset visual
+    renderOrdersGrouped(); // Reset dropdown visually
     return; 
   }
   try {
     await update(ref(db, `main_orders/${orderId}`), { status: newStatus, updatedAt: serverTimestamp() });
     await logOrder(orderId, `Status utama diubah manual oleh Admin menjadi: ${newStatus}.`);
-    toast("Status Pesanan berhasil diubah.");
-  } catch(err) { toast("Error: " + err.message); }
+    toast(`Status Pesanan diubah ke: ${newStatus}`);
+  } catch(err) { toast("Error saat menyimpan: " + err.message); }
 }
 
-/* --- LOGIKA PDF DINAMIS (SURAT JALAN & PENAGIHAN) --- */
+/* --- LOGIKA PDF DINAMIS --- */
 let activeOrderId = null; let activeOrderTotal = 0;
 
 window.bukaModalSuratJalan = function(id) {
@@ -811,7 +833,7 @@ window.bukaModalPenagihan = function(id, total) {
 
 window.executeSuratJalan = function() {
   const driver = document.getElementById("sj_pengantar").value.trim();
-  if(!driver){ toast("Mohon isi nama pengantar!"); return; }
+  if(!driver){ toast("Mohon isi nama pengantar (ekspedisi)!"); return; }
 
   const order = allOrders.find(o => o.id === activeOrderId);
   const { jsPDF } = window.jspdf; const doc = new jsPDF();
@@ -822,7 +844,7 @@ window.executeSuratJalan = function() {
   
   doc.setTextColor(0,0,0);
   doc.text(`ID Pesanan : #${order.id.toUpperCase()}`, 14, 40);
-  doc.text(`Tgl Cetak  : ${formatDate(new Date())}`, 14, 45);
+  doc.text(`Tgl Cetak  : ${formatDate(new Date().getTime())}`, 14, 45); // menggunakan .getTime() agar format konsisten
   doc.text(`Pengantar  : ${driver}`, 14, 50);
   doc.text(`Penerima   : ${order.buyerName}`, 120, 40);
   doc.text(`Perusahaan : ${order.buyerPerusahaan}`, 120, 45);
@@ -839,12 +861,12 @@ window.executeSuratJalan = function() {
   doc.save(`SuratJalan_${order.id.slice(0,6)}.pdf`);
   document.getElementById("modalSuratJalan").classList.remove("active");
   toast("Surat Jalan berhasil diunduh.");
-  logOrder(activeOrderId, `Cetak PDF Surat Jalan dengan pengantar: ${driver}`);
+  logOrder(activeOrderId, `Cetak PDF Surat Jalan. Kurir pengantar: ${driver}`);
 }
 
 window.executePenagihan = function() {
   const dibayar = Number(document.getElementById("pn_dibayar").value);
-  if(dibayar < 0){ toast("Input tidak valid!"); return; }
+  if(dibayar < 0 || dibayar === ""){ toast("Input pembayaran tidak valid!"); return; }
 
   const sisaTagihan = activeOrderTotal - dibayar;
   const order = allOrders.find(o => o.id === activeOrderId);
@@ -856,7 +878,7 @@ window.executePenagihan = function() {
   
   doc.setTextColor(0,0,0);
   doc.text(`ID Pesanan : #${order.id.toUpperCase()}`, 14, 40);
-  doc.text(`Tgl Tagihan: ${formatDate(new Date())}`, 14, 45);
+  doc.text(`Tgl Tagihan: ${formatDate(new Date().getTime())}`, 14, 45);
   doc.text(`Kepada     : ${order.buyerName} (${order.buyerPerusahaan})`, 14, 55);
 
   const items = Object.values(order.items || {});
@@ -873,7 +895,7 @@ window.executePenagihan = function() {
   doc.save(`Invoice_Tagihan_${order.id.slice(0,6)}.pdf`);
   document.getElementById("modalPenagihan").classList.remove("active");
   toast("Nota Penagihan berhasil diunduh.");
-  logOrder(activeOrderId, `Cetak PDF Nota Penagihan (Total: ${formatRupiah(activeOrderTotal)}, Dibayar: ${formatRupiah(dibayar)}).`);
+  logOrder(activeOrderId, `Cetak PDF Nota Penagihan. Total: ${formatRupiah(activeOrderTotal)}, Telah Dibayar: ${formatRupiah(dibayar)}.`);
 }
 
 window.cetakNotaLunas = function(orderId) {
@@ -886,9 +908,10 @@ window.cetakNotaLunas = function(orderId) {
   
   doc.setTextColor(0,0,0);
   doc.text(`ID Pesanan : #${order.id.toUpperCase()}`, 14, 40);
-  doc.text(`Tgl Lunas  : ${formatDate(new Date())}`, 14, 45);
+  doc.text(`Tgl Lunas  : ${formatDate(new Date().getTime())}`, 14, 45);
   doc.text(`Customer   : ${order.buyerName} (${order.buyerPerusahaan})`, 14, 50);
 
+  // Watermark
   doc.setFontSize(80); doc.setTextColor(63, 107, 79, 0.15);
   doc.text("LUNAS", 40, 150, null, 45); 
 
