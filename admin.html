@@ -89,9 +89,14 @@
   .alert-banner p { margin: 0; font-size: 13.5px; color: var(--ink); }
   
   /* Status Section Headers */
-  .status-section { margin-bottom: 30px; }
-  .section-title { font-family: 'Oswald', sans-serif; font-size: 18px; color: var(--navy); border-bottom: 2px solid var(--line); padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: .05em; display: flex; align-items: center; justify-content: space-between; }
+  .status-section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 6px; border: 1px solid var(--line); }
+  .section-title { font-family: 'Oswald', sans-serif; font-size: 18px; color: var(--navy); border-bottom: 2px solid var(--line); padding-bottom: 12px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: .05em; display: flex; align-items: center; justify-content: space-between; }
   .section-badge { background: var(--navy); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-family: 'Inter', sans-serif; }
+
+  /* Filter Bar Pembelian */
+  .filter-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; background: #fff; padding: 16px; border: 1px solid var(--line); border-radius: 6px; }
+  .filter-bar input, .filter-bar select { flex: 1; min-width: 200px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 14px; background: #FCFBF7; }
+  .filter-bar input:focus, .filter-bar select:focus { outline: 2px solid var(--copper); }
 
   .overlay{position:fixed; inset:0; background:rgba(11,30,51,.6); display:none; align-items:center; justify-content:center; z-index:1000; padding:20px;}
   .overlay.active{display:flex;}
@@ -119,14 +124,11 @@
   <!-- ==================== TAB 1: PRODUK ==================== -->
   <section class="panel active" id="panel-produk">
     <div class="grid-2">
-      <!-- Input Produk -->
       <div class="card">
         <h3>Input Data Produk</h3>
         <form id="productForm">
           <label>Pilih Pemilik (Supplier)</label>
-          <select id="p_supplierUid" required>
-            <option value="">Memuat Supplier...</option>
-          </select>
+          <select id="p_supplierUid" required><option value="">Memuat Supplier...</option></select>
           <label>Nama Produk</label><input type="text" id="p_nama" required>
           <label>Jenis / Kategori</label><input type="text" id="p_jenis" required>
           <div class="row-2">
@@ -138,7 +140,6 @@
         </form>
       </div>
 
-      <!-- Tabel Produk & Cetak -->
       <div>
         <div class="card" style="padding:15px 22px; display:flex; justify-content:space-between; align-items:center;">
           <h3 style="border:none; margin:0; padding:0;">Katalog Platform</h3>
@@ -172,8 +173,19 @@
       <span class="material-symbols-rounded icon">notification_important</span>
       <div>
         <h4>Perhatian: Terdapat Pesanan Baru!</h4>
-        <p id="alertNewOrderText">Ada pesanan yang baru dibuat oleh pembeli. Segera hubungi supplier terkait melalui tombol WhatsApp agar pesanan dapat diproses.</p>
+        <p id="alertNewOrderText">Ada pesanan dengan status "Pesanan Dibuat". Segera teruskan kepada supplier via tombol WhatsApp agar status berubah.</p>
       </div>
+    </div>
+
+    <!-- Filter & Sorting Pembelian -->
+    <div class="filter-bar">
+      <input type="text" id="searchOrder" placeholder="Cari ID Pesanan / Nama Pembeli..." oninput="renderOrdersGrouped()">
+      <select id="sortOrder" onchange="renderOrdersGrouped()">
+        <option value="dateDesc">Urutan: Terbaru (Default)</option>
+        <option value="dateAsc">Urutan: Terlama</option>
+        <option value="priceDesc">Urutan: Harga Tertinggi</option>
+        <option value="priceAsc">Urutan: Harga Terendah</option>
+      </select>
     </div>
     
     <!-- DAFTAR SECTION BERDASARKAN STATUS -->
@@ -195,8 +207,6 @@
 </main>
 
 <!-- MODALS -->
-
-<!-- Modal Edit Produk -->
 <div class="overlay" id="editProdModal">
   <div class="modal">
     <h3>Edit Produk</h3>
@@ -216,7 +226,6 @@
   </div>
 </div>
 
-<!-- Modal Cetak Data Produk -->
 <div class="overlay" id="printProdModal">
   <div class="modal">
     <h3>Cetak / Export PDF</h3>
@@ -236,7 +245,6 @@
   </div>
 </div>
 
-<!-- Modal Cetak Surat Jalan -->
 <div class="overlay" id="modalSuratJalan">
   <div class="modal">
     <h3>Cetak Surat Jalan (Pengiriman)</h3>
@@ -251,7 +259,6 @@
   </div>
 </div>
 
-<!-- Modal Cetak Nota Penagihan -->
 <div class="overlay" id="modalPenagihan">
   <div class="modal">
     <h3>Cetak Nota Penagihan</h3>
@@ -513,7 +520,7 @@ window.executePrintProducts = function() {
   doc.save(`NG_Report_${source}.pdf`);
 }
 
-/* ---------------- 3. MANAJEMEN PEMBELIAN (PENGELOMPOKAN STATUS) ---------------- */
+/* ---------------- 3. MANAJEMEN PEMBELIAN & PENGELOMPOKAN TABEL ---------------- */
 function loadOrderUpdates() {
   onValue(ref(db, "order_updates"), (snapshot) => {
     orderUpdates = [];
@@ -544,21 +551,20 @@ function loadOrders() {
   onValue(ref(db, "main_orders"), (snapshot) => {
     allOrders = [];
     snapshot.forEach(child => { allOrders.push({ id: child.key, ...child.val() }); });
-    allOrders.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    renderOrdersGrouped();
+    renderOrdersGrouped(); // Render yang akan apply sorting & filtering
   });
 }
 
 function getStatusBg(status) {
   if(status.includes("Batal") || status.includes("Kadaluarsa")) return "background:var(--danger);";
   if(status.includes("Lunas") || status.includes("Selesai")) return "background:var(--ok);";
-  if(status.includes("Pengiriman") || status.includes("Proses")) return "background:var(--info);";
+  if(status.includes("Terkirim") || status.includes("Proses")) return "background:var(--info);";
   if(status === "Pesanan Dibuat") return "background:var(--danger); font-size:12px;"; // Menandakan butuh aksi
   return "background:var(--warning);";
 }
 
-// FUNGSI UTAMA: MENGELOMPOKKAN & RENDER CARD
-function renderOrdersGrouped() {
+// FUNGSI UTAMA: MENGELOMPOKKAN & RENDER CARD DENGAN PENCARIAN & SORTING
+window.renderOrdersGrouped = function() {
   const container = document.getElementById("statusSectionsContainer");
   const alertBox = document.getElementById("alertNewOrder");
   
@@ -568,22 +574,42 @@ function renderOrdersGrouped() {
     return;
   }
 
-  // Definisi Grup Status
+  // 1. Ambil input Pencarian dan Sorting
+  let filteredOrders = [...allOrders];
+  const keyword = document.getElementById("searchOrder").value.toLowerCase();
+  if(keyword) {
+    filteredOrders = filteredOrders.filter(o => 
+      o.id.toLowerCase().includes(keyword) || 
+      (o.buyerName && o.buyerName.toLowerCase().includes(keyword)) ||
+      (o.buyerPerusahaan && o.buyerPerusahaan.toLowerCase().includes(keyword))
+    );
+  }
+
+  const sortMethod = document.getElementById("sortOrder").value;
+  filteredOrders.sort((a,b) => {
+     if(sortMethod === 'dateDesc') return (b.createdAt || 0) - (a.createdAt || 0);
+     if(sortMethod === 'dateAsc') return (a.createdAt || 0) - (b.createdAt || 0);
+     if(sortMethod === 'priceDesc') return (b.totalHarga || 0) - (a.totalHarga || 0);
+     if(sortMethod === 'priceAsc') return (a.totalHarga || 0) - (b.totalHarga || 0);
+  });
+
+  // 2. Definisi Grup Status Fundamental
   const groups = [
-    { title: "🚨 Pesanan Baru (Butuh Aksi WA)", keys: ["Pesanan Dibuat"] },
-    { title: "⏳ Menunggu Konfirmasi", keys: ["Di Proses Admin", "Pesanan Diterima Supplier"] },
-    { title: "🚚 Dalam Pengiriman", keys: ["Pesanan Dalam Proses", "Terkirim"] },
-    { title: "💳 Menunggu Pembayaran", keys: ["Pesanan Selesai Belum Bayar"] },
-    { title: "✅ Selesai Lunas", keys: ["Pesanan Selesai Lunas"] },
-    { title: "❌ Dibatalkan / Kadaluarsa", keys: ["Dibatalkan Admin", "Dibatalkan Pembeli", "Kadaluarsa"] }
+    { title: "🚨 Pesanan Dibuat (Butuh Aksi WA)", keys: ["Pesanan Dibuat"] },
+    { title: "⚙️ Pesanan Diproses Admin", keys: ["Pesanan Diproses Admin"] },
+    { title: "📦 Pesanan Diterima Supplier", keys: ["Pesanan Diterima Supplier"] },
+    { title: "🚚 Pesanan Dalam Proses", keys: ["Pesanan Dalam Proses"] },
+    { title: "📫 Pesanan Terkirim", keys: ["Pesanan Terkirim"] },
+    { title: "💳 Pesanan Selesai Belum Bayar", keys: ["Pesanan Selesai Belum Bayar"] },
+    { title: "✅ Pesanan Selesai Lunas", keys: ["Pesanan Selesai Lunas"] },
+    { title: "❌ Dibatalkan / Kadaluarsa", keys: ["Dibatalkan Pembeli", "Dibatalkan Admin", "Kadaluarsa", "Dibatalkan"] }
   ];
 
   let htmlContent = "";
   let newOrderCount = 0;
 
   groups.forEach(group => {
-    // Filter pesanan yang masuk ke grup ini
-    let ordersInGroup = allOrders.filter(o => group.keys.includes(o.status));
+    let ordersInGroup = filteredOrders.filter(o => group.keys.includes(o.status));
     
     if(group.keys.includes("Pesanan Dibuat")) newOrderCount = ordersInGroup.length;
 
@@ -595,31 +621,29 @@ function renderOrdersGrouped() {
             <span class="section-badge">${ordersInGroup.length} Pesanan</span>
           </div>
       `;
-      
-      ordersInGroup.forEach(order => {
-        htmlContent += buildOrderCard(order);
-      });
-
+      ordersInGroup.forEach(order => { htmlContent += buildOrderCard(order); });
       htmlContent += `</div>`;
     }
   });
 
+  if(htmlContent === "") {
+    htmlContent = `<div class="card"><div class="ledger-empty">Tidak ada pesanan yang cocok dengan pencarian Anda.</div></div>`;
+  }
+
   container.innerHTML = htmlContent;
 
-  // Toggle Alert
-  if(newOrderCount > 0) {
+  // Toggle Alert Notification
+  if(newOrderCount > 0 && !keyword) {
     alertBox.style.display = "flex";
-    document.getElementById("alertNewOrderText").innerHTML = `Terdapat <b>${newOrderCount} pesanan baru</b> ("Pesanan Dibuat"). Segera gunakan tombol WhatsApp pada kartu pesanan untuk meneruskan order ke supplier.`;
+    document.getElementById("alertNewOrderText").innerHTML = `Terdapat <b>${newOrderCount} pesanan baru</b> (Status: "Pesanan Dibuat"). Segera klik tombol WhatsApp pada kartu pesanan untuk meneruskan order ke supplier.`;
   } else {
     alertBox.style.display = "none";
   }
 }
 
-// HELPER: BUILD KARTU ORDER (CARD)
 function buildOrderCard(order) {
   const items = order.items ? Object.values(order.items) : [];
   
-  // Group Items By Supplier (Untuk Tombol WA - HANYA PADA "Pesanan Dibuat")
   let supGroups = {};
   for(let key in order.items) {
     const it = order.items[key];
@@ -629,7 +653,7 @@ function buildOrderCard(order) {
   }
 
   let supplierWAPanel = "";
-  // LOGIKA BARU: Tombol WA muncul jika status = "Pesanan Dibuat"
+  // TOMBOL WA HANYA DI "Pesanan Dibuat"
   if(order.status === "Pesanan Dibuat") {
     supplierWAPanel = `<div style="background:#FEF2F2; border:1px dashed var(--danger); padding:12px; border-radius:4px; margin-bottom:15px;">
       <h5 style="margin:0 0 10px; color:var(--danger);"><span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">campaign</span> Tindakan Wajib: Teruskan Pesanan ke Supplier</h5>`;
@@ -662,7 +686,6 @@ function buildOrderCard(order) {
     supplierWAPanel += `</div>`;
   }
 
-  // Render HTML Items
   let itemsHtml = items.map(i => {
     let stColor = i.status.includes("Diterima") ? "var(--ok)" : (i.status.includes("Batal") ? "var(--danger)" : "var(--warning)");
     return `<div class="order-item">
@@ -684,9 +707,13 @@ function buildOrderCard(order) {
     dynamicBtns = `<button class="btn btn-ok" onclick="cetakNotaLunas('${order.id}')"><span class="material-symbols-rounded" style="font-size:16px;">verified</span> Download Nota LUNAS</button>`;
   }
 
-  // Dropdown Status Manual Override
-  const statusOptions = ["Pesanan Dibuat", "Di Proses Admin", "Pesanan Diterima Supplier", "Pesanan Dalam Proses", "Terkirim", "Pesanan Selesai Belum Bayar", "Pesanan Selesai Lunas", "Dibatalkan Admin", "Kadaluarsa"];
-  let dropdown = `<select class="mono" style="padding:6px; font-size:12px; width:auto; border-color:var(--copper); background:#fff;" onchange="manualStatusUpdate('${order.id}', this.value)">`;
+  // Standarisasi Status Dropdown
+  const statusOptions = [
+    "Pesanan Dibuat", "Pesanan Diproses Admin", "Pesanan Diterima Supplier", 
+    "Pesanan Dalam Proses", "Pesanan Terkirim", "Pesanan Selesai Belum Bayar", 
+    "Pesanan Selesai Lunas", "Dibatalkan Pembeli"
+  ];
+  let dropdown = `<select class="mono" style="padding:6px; font-size:12px; width:auto; border-color:var(--copper); background:#fff; margin-top:8px;" onchange="manualStatusUpdate('${order.id}', this.value)">`;
   dropdown += `<option value="" disabled selected>Ubah Status Manual ⚙️</option>`;
   statusOptions.forEach(opt => {
     if(opt !== order.status) dropdown += `<option value="${opt}">${opt}</option>`;
@@ -705,7 +732,7 @@ function buildOrderCard(order) {
         </div>
         <div style="text-align:right;">
           <div class="status-tag" style="${getStatusBg(order.status)}">${order.status}</div>
-          <h3 class="mono" style="margin:5px 0; color:var(--copper-dark);">${formatRupiah(order.totalHarga)}</h3>
+          <h3 class="mono" style="margin:5px 0 0; color:var(--copper-dark);">${formatRupiah(order.totalHarga)}</h3>
           ${dropdown}
         </div>
       </div>
@@ -726,20 +753,19 @@ function buildOrderCard(order) {
 
 /* --- LOGIKA PERUBAHAN STATUS ORDER --- */
 
-// Tombol WA & Auto Update Status Item (LOGIKA BARU)
+// Tombol WA & Auto Update Status -> Pesanan Diproses Admin
 window.forwardToSupplier = async function(orderId, supplierUid, waUrl, itemKeys) {
-  // Buka WhatsApp di tab baru
-  window.open(waUrl, '_blank');
+  window.open(waUrl, '_blank'); // Buka WhatsApp
   
   try {
     const order = allOrders.find(o => o.id === orderId);
     let itemsUpdate = {};
     let allForwarded = true;
 
-    // Logika Baru: Klik WA = "Di Proses Admin"
-    itemKeys.forEach(key => { itemsUpdate[`items/${key}/status`] = "Di Proses Admin"; });
+    // Ubah sub-order spesifik supplier ini
+    itemKeys.forEach(key => { itemsUpdate[`items/${key}/status`] = "Pesanan Diproses Admin"; });
     
-    // Check apakah dengan update ini SEMUA item dalam order sudah minimal "Di Proses Admin" atau lebih tinggi
+    // Check apakah dengan update ini SEMUA item dalam order sudah minimal "Pesanan Diproses Admin"
     for(let key in order.items) {
       if(!itemKeys.includes(key) && order.items[key].status === "Pesanan Dibuat") {
         allForwarded = false; // Masih ada supplier lain yg belum di-WA
@@ -747,12 +773,12 @@ window.forwardToSupplier = async function(orderId, supplierUid, waUrl, itemKeys)
     }
     
     if(allForwarded) {
-      itemsUpdate["status"] = "Di Proses Admin";
+      itemsUpdate["status"] = "Pesanan Diproses Admin";
     }
     itemsUpdate["updatedAt"] = serverTimestamp();
 
     await update(ref(db, `main_orders/${orderId}`), itemsUpdate);
-    await logOrder(orderId, `Admin meneruskan pesanan via WA ke Supplier. Sub-order maju menjadi Di Proses Admin.`);
+    await logOrder(orderId, `Admin meneruskan pesanan via WA. Sub-order maju menjadi Pesanan Diproses Admin.`);
     toast("Status barang supplier berhasil dimajukan.");
   } catch(err) { toast("Gagal update otomatis: " + err.message); }
 }
@@ -760,8 +786,8 @@ window.forwardToSupplier = async function(orderId, supplierUid, waUrl, itemKeys)
 // Manual Status Update (Override)
 window.manualStatusUpdate = async function(orderId, newStatus) {
   if(!confirm(`Yakin mengubah status utama pesanan secara paksa menjadi: ${newStatus}?`)) {
-    // Reset dropdown to default visually
-    loadOrders(); return; 
+    loadOrders(); // Reset visual
+    return; 
   }
   try {
     await update(ref(db, `main_orders/${orderId}`), { status: newStatus, updatedAt: serverTimestamp() });
@@ -880,7 +906,6 @@ window.cetakNotaLunas = function(orderId) {
   toast("Kuitansi Lunas berhasil diunduh.");
   logOrder(orderId, "Cetak PDF Kuitansi Resmi LUNAS.");
 }
-
 </script>
 </body>
 </html>
