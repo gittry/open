@@ -592,7 +592,7 @@ function renderOrders() {
     }
 
     let supplierWAPanel = "";
-    if(order.status === "Di Proses Admin") {
+    if(order.status === "Pesanan Dibuat") {
       supplierWAPanel = `<div style="background:#FFFBEB; border:1px dashed var(--warning); padding:12px; border-radius:4px; margin-bottom:15px;">
         <h5 style="margin:0 0 10px; color:var(--warning);">Tindakan Admin: Teruskan Pesanan ke Supplier (Otomatis)</h5>`;
       
@@ -702,7 +702,7 @@ window.forwardToSupplier = async function(orderId, supplierUid, waUrl, itemKeys)
     let allAccepted = true;
 
     // Ubah status sub-order spesifik supplier ini
-    itemKeys.forEach(key => { itemsUpdate[`items/${key}/status`] = "Pesanan Diterima Supplier"; });
+    itemKeys.forEach(key => { itemsUpdate[`items/${key}/status`] = "Pesanan Diterima Admin"; });
     
     // Check apakah dengan update ini SEMUA item dalam order menjadi diterima
     for(let key in order.items) {
