@@ -548,15 +548,6 @@ function normalizePhone(raw){
   return p;
 }
 
-async function copyToClipboard(text){
-  try{
-    await navigator.clipboard.writeText(text);
-    toast("Pesan disalin ke clipboard.");
-  }catch(err){
-    toast("Gagal menyalin otomatis. Salin manual dari pop-up browser.");
-  }
-}
-
 // Interaksi Tab Menu
 document.querySelectorAll(".tab-stamp").forEach(btn=>{
   btn.addEventListener("click", ()=>{
@@ -753,7 +744,7 @@ function loadProductUpdates() {
   });
 }
 
-window.loadProductUpdates = renderProductUpdates; // dipakai juga sebagai handler search (data sudah di memory)
+window.loadProductUpdates = renderProductUpdates;
 function renderProductUpdates(){
   const wrap = document.getElementById("adminProductUpdates");
   const keyword = (document.getElementById("searchProductAudit")?.value || "").toLowerCase();
@@ -832,7 +823,7 @@ function loadOrderUpdates() {
   });
 }
 
-window.loadOrderUpdates = renderOrderUpdates; // dipakai juga sebagai handler search (data sudah di memory)
+window.loadOrderUpdates = renderOrderUpdates;
 function renderOrderUpdates(){
   const wrap = document.getElementById("adminOrderUpdates");
   const keyword = (document.getElementById("searchOrderAudit")?.value || "").toLowerCase();
@@ -898,7 +889,7 @@ function renderStats(){
   `;
 }
 
-// FUNGSI UTAMA RENDER PESANAN: Filter, Sort & Grouping (tiap grup status bisa diminimize)
+// FUNGSI UTAMA RENDER PESANAN: Filter, Sort & Grouping
 window.renderOrdersGrouped = function() {
   const container = document.getElementById("statusSectionsContainer");
   const alertBox = document.getElementById("alertNewOrder");
@@ -913,7 +904,6 @@ window.renderOrdersGrouped = function() {
     return;
   }
 
-  // 1. Pencarian & Pengurutan
   let filteredOrders = [...allOrders];
   const keyword = document.getElementById("searchOrder").value.toLowerCase();
 
@@ -939,7 +929,6 @@ window.renderOrdersGrouped = function() {
      }
   });
 
-  // 2. Grup Status (bisa diminimize per grup)
   let htmlContent = "";
   let navHtml = "";
   let newOrderCount = 0;
@@ -974,13 +963,12 @@ window.renderOrdersGrouped = function() {
 
   if(newOrderCount > 0 && !keyword) {
     alertBox.style.display = "flex";
-    document.getElementById("alertNewOrderText").innerHTML = `Terdapat <b>${newOrderCount} pesanan baru</b> (Status: "Pesanan Dibuat"). Segera klik tombol WhatsApp pada setiap item pesanan untuk meneruskan order ke supplier.`;
+    document.getElementById("alertNewOrderText").innerHTML = `Terdapat <b>${newOrderCount} pesanan baru</b> (Status: "Pesanan Dibuat"). Segera klik tombol WhatsApp pada setiap kartu pesanan untuk meneruskan order ke supplier.`;
   } else {
     alertBox.style.display = "none";
   }
 }
 
-// Toggle minimize per grup status (klik header grup)
 document.getElementById("statusSectionsContainer").addEventListener("click", (e)=>{
   const toggler = e.target.closest("[data-toggle-section]");
   if(!toggler) return;
@@ -1004,57 +992,84 @@ window.collapseAllSections = function(){
   renderOrdersGrouped();
 }
 
-/* --------- Kartu Pesanan --------- */
+/* --------- Kartu Pesanan (CORE PERBAIKAN) --------- */
 function buildOrderCard(order) {
-  const itemEntries = Object.entries(order.items || {}); // [key, item]
+  const itemEntries = Object.entries(order.items || {}); 
 
-  // Kelompokkan per supplier (untuk tombol WA massal per supplier)
+  // Kelompokkan berdasar UID supplier untuk pengecekan tombol WA
   let supGroups = {};
   itemEntries.forEach(([key, it]) => {
     if(!supGroups[it.supplierUid]) supGroups[it.supplierUid] = [];
     supGroups[it.supplierUid].push(key);
   });
 
-  // Panel Tindakan WA (hanya untuk status "Pesanan Dibuat")
+  /* 
+     ====================================================
+     LOGIKA BARU PANEL WA (PESANAN DIBUAT)
+     - 1 Supplier = 1 Tombol WA untuk semua item
+     - >1 Supplier = Multi Tombol WA untuk masing-masing
+     ====================================================
+  */
   let waPanel = "";
   if(order.status === "Pesanan Dibuat") {
     const pendingSupUids = Object.keys(supGroups).filter(sUid =>
       supGroups[sUid].some(k => order.items[k].status === "Pesanan Dibuat")
     );
-    if(pendingSupUids.length){
+    
+    if(pendingSupUids.length === 1) {
+      // KASUS 1: SEMUA BARANG BERASAL DARI 1 SUPPLIER YANG SAMA
+      const sUid = pendingSupUids[0];
+      const sData = allSuppliers.find(s => s.id === sUid);
+      const sPerus = sData ? sData.perusahaan : 'Supplier Tidak Dikenal';
+      
+      waPanel = `<div class="wa-panel" style="background:var(--ok-bg); border-color:var(--ok);">
+        <h5 style="color:var(--ok);"><span class="material-symbols-rounded" style="font-size:16px;">campaign</span> Tindakan Wajib: Teruskan Pesanan ke Supplier</h5>
+        <div class="supplier-group" style="border-left: 3px solid var(--ok); padding-left:10px;">
+          <span class="sname">Semua barang dibeli dari supplier: <b>${esc(sPerus)}</b></span>
+          <div class="actions">
+            <button class="btn btn-wa" onclick="forwardSupplierGroup('${order.id}','${sUid}')">
+              <span class="material-symbols-rounded" style="font-size:16px;">chat</span> Teruskan Semua Pesanan (1x WA)
+            </button>
+          </div>
+        </div>
+      </div>`;
+
+    } else if (pendingSupUids.length > 1) {
+      // KASUS 2: BARANG BERASAL DARI SUPPLIER YANG BERBEDA (MULTI)
       waPanel = `<div class="wa-panel">
-        <h5><span class="material-symbols-rounded" style="font-size:16px;">campaign</span> Tindakan Wajib: Teruskan Pesanan ke Supplier</h5>`;
+        <h5><span class="material-symbols-rounded" style="font-size:16px;">campaign</span> Tindakan Wajib: Teruskan Pesanan (Multi-Supplier)</h5>
+        <p class="hint" style="margin-top:0;">Pesanan ini memuat barang dari beberapa supplier. Teruskan pesanan ke masing-masing supplier:</p>`;
+      
       pendingSupUids.forEach(sUid => {
         const sData = allSuppliers.find(s => s.id === sUid);
         const sPerus = sData ? sData.perusahaan : 'Supplier Tidak Dikenal';
         const pendingKeys = supGroups[sUid].filter(k => order.items[k].status === "Pesanan Dibuat");
         waPanel += `<div class="supplier-group">
           <span class="sname">${esc(sPerus)} <span class="badge">${pendingKeys.length} item</span></span>
-          <div class="actions">`;
-        if(pendingKeys.length > 1){
-          waPanel += `<button class="btn btn-wa btn-sm" onclick="forwardSupplierGroup('${order.id}','${sUid}')"><span class="material-symbols-rounded" style="font-size:14px;">chat</span> Kirim Semua Item Supplier Ini</button>`;
-        }
-        waPanel += `</div></div>`;
+          <div class="actions">
+            <button class="btn btn-wa btn-sm" onclick="forwardSupplierGroup('${order.id}','${sUid}')">
+              <span class="material-symbols-rounded" style="font-size:14px;">chat</span> WA ke ${esc(sPerus)}
+            </button>
+          </div>
+        </div>`;
       });
-      waPanel += `<p class="hint" style="margin:8px 0 0;">Atau gunakan tombol WA pada masing-masing item di daftar barang di bawah untuk mengirim per item.</p></div>`;
+      waPanel += `</div>`;
     }
   }
 
-  // Daftar item (dengan checkbox pilih + tombol WA per item + salin pesan)
+  // Daftar item HTML (hilangkan tombol action WA per item untuk fokus pada satu alur grup di atas)
   let itemsHtml = itemEntries.map(([key, i]) => {
     const stColor = i.status.includes("Diterima") ? "var(--ok)" : (i.status.includes("Batal") ? "var(--danger)" : "var(--warning)");
     const sData = allSuppliers.find(s => s.id === i.supplierUid);
     const sPerus = sData ? sData.perusahaan : 'Supplier';
+    
     let rightAction = "";
     if(i.status === "Pesanan Dibuat"){
-      rightAction = `
-        <div class="item-actions">
-          <button class="btn btn-wa btn-sm" title="Teruskan item ini ke ${esc(sPerus)} via WhatsApp" onclick="forwardItemToSupplier('${order.id}','${key}')"><span class="material-symbols-rounded" style="font-size:14px;">chat</span> WA</button>
-          <button class="btn-link btn-sm" title="Salin teks pesan tanpa membuka WA" onclick="copyItemMessage('${order.id}','${key}')">Salin</button>
-        </div>`;
+      rightAction = `<span class="item-wa-done" style="color:var(--warning);"><span class="material-symbols-rounded" style="font-size:13px;">schedule</span> Menunggu diteruskan</span>`;
     } else {
       rightAction = `<span class="item-wa-done"><span class="material-symbols-rounded" style="font-size:13px;">check_circle</span> Diteruskan</span>`;
     }
+
     return `<div class="order-item" data-key="${key}">
       <input type="checkbox" class="item-chk" data-order="${order.id}" data-key="${key}" checked onchange="updateSelectLabel('${order.id}')">
       <div class="item-body">
@@ -1068,9 +1083,7 @@ function buildOrderCard(order) {
     </div>`;
   }).join("");
 
-  // Tombol Cetak Dokumen (bekerja pada item yang tercentang)
   let dynamicBtns = `<button class="btn btn-outline btn-sm" onclick="toggleSelectAll('${order.id}')" id="selToggle-${order.id}">Batal Pilih Semua</button>`;
-
   const buyerPhoneRaw = order.buyerTelepon || order.buyerPhone || order.buyerNoWa || "";
   if(buyerPhoneRaw){
     dynamicBtns += `<button class="btn btn-outline btn-sm" onclick="contactBuyer('${order.id}')"><span class="material-symbols-rounded" style="font-size:14px;">forum</span> Hubungi Pembeli</button>`;
@@ -1084,7 +1097,6 @@ function buildOrderCard(order) {
     dynamicBtns += `<button class="btn btn-ok" onclick="cetakNotaLunas('${order.id}')"><span class="material-symbols-rounded" style="font-size:16px;">verified</span> Download Nota LUNAS</button>`;
   }
 
-  // Dropdown Status Manual
   const statusOptions = [
     "Pesanan Dibuat", "Pesanan Diproses Admin", "Pesanan Diterima Supplier",
     "Pesanan Dalam Proses", "Pesanan Terkirim", "Pesanan Selesai Belum Bayar",
@@ -1118,7 +1130,7 @@ function buildOrderCard(order) {
       ${waPanel}
 
       <div class="items-toolbar">
-        <h5>Daftar Barang Dibeli (centang untuk memilih item pada dokumen cetak):</h5>
+        <h5>Daftar Barang Dibeli (centang untuk dokumen cetak):</h5>
       </div>
       ${itemsHtml}
 
@@ -1129,7 +1141,7 @@ function buildOrderCard(order) {
   `;
 }
 
-/* --------- Pilih Semua / Batal Semua item pada satu order --------- */
+/* --------- Pilih Semua / Batal Semua item --------- */
 window.toggleSelectAll = function(orderId){
   const card = document.getElementById(`order-card-${orderId}`);
   if(!card) return;
@@ -1152,7 +1164,7 @@ function getSelectedItemKeys(orderId){
   return Array.from(card.querySelectorAll('.item-chk:checked')).map(c => c.dataset.key);
 }
 
-/* --------- Logika WA per item & per grup supplier --------- */
+/* --------- Logika WA Grup Supplier --------- */
 async function recalcMainStatus(orderId){
   const order = allOrders.find(o => o.id === orderId);
   if(!order || !order.items) return;
@@ -1162,7 +1174,6 @@ async function recalcMainStatus(orderId){
   }
 }
 
-// Teks pesan sederhana (plain text) untuk item / kumpulan item ke supplier
 function buildPlainMessage(orderId, sPerus, itemLinesArr){
   return `Halo ${sPerus}, ada pesanan baru dari Novastra Global Supply (NG Supply).
 ID Pesanan: #${orderId.slice(0,6).toUpperCase()}
@@ -1177,7 +1188,6 @@ function openWaWithMessage(phone, text){
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
 }
 
-// Fallback: minta nomor manual bila supplier belum punya nomor WA tersimpan
 let pendingManualPhoneResolve = null;
 function askManualPhone(supplierLabel){
   return new Promise((resolve)=>{
@@ -1207,36 +1217,6 @@ async function resolveSupplierPhone(sData){
   return manual ? normalizePhone(manual) : null;
 }
 
-window.forwardItemToSupplier = async function(orderId, itemKey){
-  const order = allOrders.find(o => o.id === orderId);
-  const item = order?.items?.[itemKey];
-  if(!item) return;
-  const sData = allSuppliers.find(s => s.id === item.supplierUid);
-
-  const phone = await resolveSupplierPhone(sData);
-  if(!phone){ toast("Pesan dibatalkan: nomor WA tidak tersedia."); return; }
-
-  const text = buildPlainMessage(orderId, sData?.perusahaan || "Supplier", [`- ${item.nama} (x${item.qty})`]);
-  openWaWithMessage(phone, text);
-
-  try{
-    await update(ref(db, `main_orders/${orderId}/items/${itemKey}`), { status: "Pesanan Diproses Admin" });
-    await update(ref(db, `main_orders/${orderId}`), { updatedAt: serverTimestamp() });
-    await logOrder(orderId, `Admin meneruskan item "${item.nama}" via WA ke ${sData?.perusahaan || 'supplier'}.`);
-    await recalcMainStatus(orderId);
-    toast(`Item "${item.nama}" diteruskan ke supplier.`);
-  } catch(err){ toast("Gagal update: " + err.message); }
-}
-
-window.copyItemMessage = function(orderId, itemKey){
-  const order = allOrders.find(o => o.id === orderId);
-  const item = order?.items?.[itemKey];
-  if(!item) return;
-  const sData = allSuppliers.find(s => s.id === item.supplierUid);
-  const text = buildPlainMessage(orderId, sData?.perusahaan || "Supplier", [`- ${item.nama} (x${item.qty})`]);
-  copyToClipboard(text);
-}
-
 window.forwardSupplierGroup = async function(orderId, supplierUid){
   const order = allOrders.find(o => o.id === orderId);
   if(!order) return;
@@ -1257,13 +1237,12 @@ window.forwardSupplierGroup = async function(orderId, supplierUid){
     pendingKeys.forEach(k => { itemsUpdate[`items/${k}/status`] = "Pesanan Diproses Admin"; });
     itemsUpdate["updatedAt"] = serverTimestamp();
     await update(ref(db, `main_orders/${orderId}`), itemsUpdate);
-    await logOrder(orderId, `Admin meneruskan ${pendingKeys.length} item ke supplier ${sData?.perusahaan || ''} via WA.`);
+    await logOrder(orderId, `Admin meneruskan pesanan ke supplier ${sData?.perusahaan || ''} via WA.`);
     await recalcMainStatus(orderId);
-    toast(`${pendingKeys.length} item diteruskan ke ${sData?.perusahaan || 'supplier'}.`);
+    toast(`Pesanan diteruskan ke ${sData?.perusahaan || 'supplier'}.`);
   } catch(err){ toast("Gagal update otomatis: " + err.message); }
 }
 
-// Hubungi pembeli langsung (info status pesanan singkat) — hanya muncul jika nomor pembeli tersimpan
 window.contactBuyer = function(orderId){
   const order = allOrders.find(o => o.id === orderId);
   if(!order) return;
@@ -1280,7 +1259,6 @@ Terima kasih telah berbelanja di NG Supply.`;
   openWaWithMessage(phone, text);
 }
 
-// Override Manual
 window.manualStatusUpdate = async function(orderId, newStatus) {
   if(!confirm(`Yakin mengubah status utama pesanan secara paksa menjadi: ${newStatus}?`)) {
     renderOrdersGrouped();
@@ -1294,7 +1272,7 @@ window.manualStatusUpdate = async function(orderId, newStatus) {
 }
 
 /* =======================================================================
-   4. LOGIKA PDF DINAMIS (bekerja pada item terpilih)
+   4. LOGIKA PDF DINAMIS
    ======================================================================= */
 let activeOrderId = null;
 let activeSelectedKeys = [];
