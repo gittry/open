@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Database Reset Tool | NG Supply</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { 
+    margin: 0; padding: 20px; font-family: 'Inter', sans-serif; 
+    background-color: #111; /* Tema gelap untuk area berbahaya */
+    color: #eee; display: flex; justify-content: center; align-items: center; min-height: 100vh;
+  }
+  .card {
+    background: #1e1e1e; padding: 30px; border-radius: 8px; width: 100%; max-width: 400px;
+    border-top: 4px solid #dc2626; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    display: none; /* Disembunyikan sampai divalidasi admin */
+  }
+  h2 { margin: 0 0 5px; color: #fca5a5; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
+  p { margin: 0 0 20px; font-size: 13px; color: #9ca3af; line-height: 1.5; }
+  
+  label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #d1d5db; }
+  select, input { 
+    width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 4px;
+    background: #2a2a2a; border: 1px solid #4b5563; color: #fff; font-family: 'Inter', sans-serif;
+  }
+  input:focus, select:focus { outline: 2px solid #dc2626; border-color: transparent; }
+  
+  .btn-danger {
+    width: 100%; background: #dc2626; color: #fff; border: none; padding: 14px;
+    font-size: 14px; font-weight: 700; border-radius: 4px; cursor: pointer;
+    text-transform: uppercase; transition: background 0.2s;
+  }
+  .btn-danger:hover { background: #b91c1c; }
+  .btn-danger:disabled { background: #7f1d1d; cursor: not-allowed; color: #9ca3af; }
+
+  #authScreen { text-align: center; font-weight: 600; color: #9ca3af; }
+  .alert { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 4px; font-size: 13px; font-weight: 600; margin-bottom: 20px; border-left: 4px solid #991b1b; display: none; }
+</style>
+</head>
+<body>
+
+<!-- Status Loading / Cek Akses -->
+<div id="authScreen">
+  <div style="font-size: 24px; margin-bottom: 10px;">🛡️</div>
+  Memverifikasi Akses Admin...
+</div>
+
+<!-- Panel Reset -->
+<div class="card" id="resetPanel">
+  <h2>⚠️ Database Reset Tool</h2>
+  <p>Pilih partisi data yang ingin dihapus. Semua log (Audit Trail) dari partisi terpilih juga akan ikut terhapus permanen.</p>
+  
+  <div class="alert" id="errorMessage"></div>
+
+  <form id="resetForm">
+    <label>Pilih Data yang Akan Dihapus</label>
+    <select id="targetData" required>
+      <option value="" disabled selected>-- Pilih Target Database --</option>
+      <option value="produk">Data Katalog Produk & Riwayat Produk</option>
+      <option value="pembelian">Data Pesanan & Riwayat Pesanan</option>
+      <option value="semua">HAPUS KEDUANYA (Produk & Pesanan)</option>
+    </select>
+
+    <label>Kode Rahasia (PIN)</label>
+    <input type="password" id="secretPin" placeholder="Masukkan 6 Digit PIN" required maxlength="6" style="font-family: 'JetBrains Mono', monospace; font-size: 16px; letter-spacing: 4px; text-align:center;">
+
+    <button type="submit" class="btn-danger" id="btnReset">🔥 Musnahkan Data</button>
+  </form>
+</div>
+
+<script type="module">
+/* =======================================================================
+   ⚙️  KONFIGURASI FIREBASE
+   ======================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDXXnEyXgnzZqrBiTOkW47kAuV7MyzQ4EM",
+  authDomain: "nodemcu-91530.firebaseapp.com",
+  databaseURL: "https://nodemcu-91530-default-rtdb.firebaseio.com",
+  projectId: "nodemcu-91530",
+  storageBucket: "nodemcu-91530.appspot.com",
+  messagingSenderId: "113192658909",
+  appId: "1:113192658909:web:ed5ae18fa4d708faa2f834"
+};
+/* ======================================================================= */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getDatabase, ref, get, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+const SECRET_PIN = "050173";
+
+// 1. CEK OTENTIKASI & LEVEL ADMIN
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    try {
+      const snap = await get(ref(db, `users/${user.uid}`));
+      if(snap.exists() && snap.val().level === 'admin') {
+        // Jika benar Admin, sembunyikan layar loading, munculkan Panel Reset
+        document.getElementById("authScreen").style.display = "none";
+        document.getElementById("resetPanel").style.display = "block";
+      } else {
+        document.getElementById("authScreen").innerHTML = `<div style="color:#ef4444;">Akses Ditolak! Anda bukan Administrator.</div>`;
+      }
+    } catch(err) {
+      document.getElementById("authScreen").innerHTML = `Error memeriksa izin: ${err.message}`;
+    }
+  } else {
+    // Jika belum login, tendang ke index
+    window.location.href = 'index.html';
+  }
+});
+
+function showError(msg) {
+  const el = document.getElementById("errorMessage");
+  el.textContent = msg;
+  el.style.display = "block";
+  setTimeout(() => { el.style.display = "none"; }, 4000);
+}
+
+// 2. LOGIKA PENGHAPUSAN
+document.getElementById("resetForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const target = document.getElementById("targetData").value;
+  const pin = document.getElementById("secretPin").value;
+  const btn = document.getElementById("btnReset");
+
+  // Validasi PIN
+  if(pin !== SECRET_PIN) {
+    showError("PIN Rahasia Salah!");
+    document.getElementById("secretPin").value = "";
+    return;
+  }
+
+  // Konfirmasi Berlapis
+  let targetName = target === 'produk' ? 'PRODUK' : (target === 'pembelian' ? 'PESANAN' : 'SEMUA DATA PRODUK & PESANAN');
+  
+  if(!confirm(`⚠️ PERINGATAN TINGKAT TINGGI ⚠️\n\nAnda akan MENGHAPUS ${targetName}. Tindakan ini tidak bisa dibatalkan.\n\nLanjutkan?`)) return;
+  if(!confirm(`Konfirmasi Terakhir: Apakah Anda YAKIN 100% ingin menghapus data ini dari Database Server?`)) return;
+
+  btn.disabled = true;
+  btn.textContent = "Menghapus Database...";
+
+  try {
+    if(target === 'produk') {
+      await remove(ref(db, 'products'));
+      await remove(ref(db, 'product_updates'));
+    } else if(target === 'pembelian') {
+      await remove(ref(db, 'main_orders'));
+      await remove(ref(db, 'order_updates'));
+    } else if(target === 'semua') {
+      await remove(ref(db, 'products'));
+      await remove(ref(db, 'product_updates'));
+      await remove(ref(db, 'main_orders'));
+      await remove(ref(db, 'order_updates'));
+    }
+
+    alert(`✅ BERHASIL! Database ${targetName} telah dikosongkan.`);
+    document.getElementById("resetForm").reset();
+  } catch(error) {
+    alert("Terjadi Error Sistem: " + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🔥 Musnahkan Data";
+  }
+});
+</script>
+</body>
+</html>
