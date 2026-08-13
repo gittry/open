@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novastra Global Supply | NG Supply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0B1E33;
+    --steel:#16324F;
+    --paper:#F2EEE4;
+    --paper-dim:#E7E1D2;
+    --copper:#C97C2C;
+    --copper-dark:#A5621E;
+    --slate:#4B5563;
+    --ink:#1B2430;
+    --line:#C9BFA6;
+    --ok:#3F6B4F;
+    --danger:#9C3B2E;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    background-image:
+      linear-gradient(var(--paper-dim) 1px, transparent 1px),
+      linear-gradient(90deg, var(--paper-dim) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.03em;}
+
+  /* ===== Top bar ===== */
+  header.topbar{
+    background:var(--navy);
+    color:var(--paper);
+    padding:16px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:3px solid var(--copper);
+    position:sticky; top:0; z-index:50;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{
+    width:42px; height:42px;
+    border:2px solid var(--copper);
+    border-radius:4px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Oswald',sans-serif;
+    font-weight:700; font-size:15px; color:var(--copper);
+    transform:rotate(-2deg);
+  }
+  .brand-text .display{font-size:19px; font-weight:600; line-height:1.1; color:#fff;}
+  .brand-text .tag{font-size:11px; letter-spacing:.18em; color:var(--copper); font-family:'JetBrains Mono',monospace;}
+
+  .auth-area{display:flex; align-items:center; gap:12px;}
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    padding:10px 18px;
+    border-radius:3px;
+    border:1px solid transparent;
+    cursor:pointer;
+    transition:transform .12s ease, background .12s ease;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-copper{background:var(--copper); color:#fff; border-color:var(--copper-dark);}
+  .btn-copper:hover{background:var(--copper-dark);}
+  .btn-outline{background:transparent; color:var(--paper); border-color:rgba(242,238,228,.4);}
+  .btn-outline:hover{border-color:var(--copper);}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--ink);}
+  .btn-ghost:hover{border-color:var(--copper); color:var(--copper-dark);}
+  .btn-danger{background:transparent; border:1px solid var(--danger); color:var(--danger); font-size:12px; padding:6px 10px;}
+  .btn-danger:hover{background:var(--danger); color:#fff;}
+  .btn[disabled]{opacity:.45; cursor:not-allowed;}
+
+  .user-chip{display:flex; align-items:center; gap:8px; font-size:13px;}
+  .user-chip img{width:30px; height:30px; border-radius:50%; border:2px solid var(--copper);}
+
+  /* ===== Hero / manifest header ===== */
+  .hero{
+    max-width:1100px; margin:0 auto; padding:40px 28px 20px;
+  }
+  .hero-eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px; letter-spacing:.2em; color:var(--copper-dark);
+    display:flex; align-items:center; gap:10px;
+  }
+  .hero-eyebrow::before{content:""; width:26px; height:1px; background:var(--copper-dark); display:inline-block;}
+  .hero h1{
+    font-size:clamp(30px,5vw,46px);
+    margin:10px 0 8px;
+    line-height:1.02;
+  }
+  .hero p.sub{color:var(--slate); max-width:560px; font-size:15px; margin-bottom:26px;}
+
+  .stat-strip{
+    display:grid; grid-template-columns:repeat(3,1fr);
+    border:1px solid var(--line); border-radius:4px; overflow:hidden;
+    background:rgba(255,255,255,.5);
+  }
+  .stat{padding:16px 20px; border-right:1px dashed var(--line);}
+  .stat:last-child{border-right:none;}
+  .stat .num{font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; color:var(--navy);}
+  .stat .lbl{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--slate); margin-top:2px;}
+
+  /* ===== Tabs (stamp style) ===== */
+  .tabs-wrap{max-width:1100px; margin:34px auto 0; padding:0 28px;}
+  .tabs{display:flex; gap:14px; margin-bottom:26px;}
+  .tab-stamp{
+    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.08em;
+    font-size:14px; font-weight:600;
+    padding:12px 26px;
+    border:2px dashed var(--line);
+    border-radius:4px;
+    background:transparent;
+    color:var(--slate);
+    cursor:pointer;
+    transform:rotate(-1deg);
+    transition:all .15s ease;
+  }
+  .tab-stamp:nth-child(2){transform:rotate(1deg);}
+  .tab-stamp.active{
+    border-style:solid;
+    border-color:var(--copper);
+    color:var(--copper-dark);
+    background:#fff;
+    box-shadow:2px 2px 0 var(--copper);
+  }
+
+  main{max-width:1100px; margin:0 auto; padding:0 28px 80px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .grid-2{display:grid; grid-template-columns:340px 1fr; gap:24px; align-items:start;}
+  @media(max-width:820px){.grid-2{grid-template-columns:1fr;}}
+
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:22px;
+    position:relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute; top:10px; right:10px; bottom:10px; left:10px;
+    border:1px dashed var(--paper-dim);
+    pointer-events:none;
+    border-radius:3px;
+  }
+  .card h3{
+    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.05em;
+    font-size:15px; margin:0 0 16px; color:var(--navy);
+    border-bottom:2px solid var(--copper); padding-bottom:8px;
+  }
+
+  label{display:block; font-size:12px; font-weight:600; letter-spacing:.03em; margin:14px 0 5px; color:var(--slate);}
+  label:first-of-type{margin-top:0;}
+  input,select{
+    width:100%; padding:10px 12px;
+    border:1px solid var(--line); border-radius:3px;
+    font-family:'Inter',sans-serif; font-size:14px;
+    background:#FCFBF7;
+  }
+  input:focus,select:focus{outline:2px solid var(--copper); outline-offset:1px;}
+  .row-2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+
+  .locked{
+    text-align:center; padding:30px 16px; color:var(--slate); font-size:14px;
+    border:1px dashed var(--line); border-radius:4px; background:#fff;
+  }
+
+  /* ===== Ledger table (products) ===== */
+  .ledger{border:1px solid var(--line); border-radius:5px; background:#fff; overflow:hidden;}
+  .ledger-head{
+    display:grid; grid-template-columns: 2fr 1fr 1fr .9fr .9fr 1.3fr auto;
+    gap:8px; padding:12px 18px;
+    background:var(--navy); color:var(--paper);
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  }
+  .ledger-row{
+    display:grid; grid-template-columns: 2fr 1fr 1fr .9fr .9fr 1.3fr auto;
+    gap:8px; padding:14px 18px; align-items:center;
+    border-top:1px dashed var(--line);
+    font-size:13.5px;
+  }
+  .ledger-row:hover{background:#FBF8EF;}
+  .ledger-row .name{font-weight:600; color:var(--navy);}
+  .ledger-row .jenis-badge{
+    display:inline-block; font-size:11px; padding:3px 8px; border-radius:10px;
+    background:var(--paper-dim); color:var(--slate); font-family:'JetBrains Mono',monospace;
+  }
+  .ledger-row .price{font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--copper-dark);}
+  .ledger-row .supplier{font-size:12px; color:var(--slate);}
+  .ledger-empty{padding:30px; text-align:center; color:var(--slate); font-size:14px;}
+
+  .filter-bar{display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;}
+  .filter-bar input, .filter-bar select{width:auto; min-width:180px;}
+
+  /* modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(11,30,51,.55);
+    display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .overlay.active{display:flex;}
+  .modal{background:#fff; border-radius:6px; padding:26px; width:100%; max-width:380px; border-top:4px solid var(--copper);}
+  .modal h4{font-family:'Oswald',sans-serif; text-transform:uppercase; margin:0 0 4px; color:var(--navy);}
+  .modal p{font-size:13px; color:var(--slate); margin:0 0 16px;}
+  .modal-actions{display:flex; gap:10px; margin-top:18px;}
+
+  .toast{
+    position:fixed; bottom:22px; right:22px; background:var(--navy); color:#fff;
+    padding:12px 18px; border-radius:4px; border-left:4px solid var(--copper);
+    font-size:13.5px; z-index:200; opacity:0; transform:translateY(10px);
+    transition:all .25s ease; max-width:300px;
+  }
+  .toast.show{opacity:1; transform:translateY(0);}
+
+  footer{
+    text-align:center; padding:26px; font-size:12px; color:var(--slate);
+    border-top:1px dashed var(--line); font-family:'JetBrains Mono',monospace;
+  }
+
+  @media(max-width:700px){
+    .ledger-head{display:none;}
+    .ledger-row{grid-template-columns:1fr; gap:4px;}
+    .ledger-row span::before{content: attr(data-label) ": "; font-weight:600; color:var(--slate); font-family:'Inter',sans-serif; font-size:11px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================================================================== -->
+<!--  KONFIGURASI FIREBASE & GOOGLE — lihat blok <script type="module">   -->
+<!--  di bagian paling atas <script> pada akhir file ini.                -->
+<!-- ===================================================================== -->
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">NG</div>
+    <div class="brand-text">
+      <div class="display" id="companyNameEl">Novastra Global Supply</div>
+      <div class="tag" id="companyShortEl">NG SUPPLY // TRADE PLATFORM</div>
+    </div>
+  </div>
+  <div class="auth-area" id="authArea">
+    <button class="btn btn-copper" id="loginBtn">Masuk dengan Google</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-eyebrow">MANIFEST DIGITAL — B2B SUPPLY LEDGER</div>
+  <h1>Satu jalur untuk<br>Supplier &amp; Pembeli.</h1>
+  <p class="sub">Supplier mencatat harga, jenis, jumlah stok, dan minimal pesan. Pembeli menelusuri katalog dan mengajukan pesanan langsung — semua tercatat real-time.</p>
+
+  <div class="stat-strip">
+    <div class="stat"><div class="num mono" id="statProducts">0</div><div class="lbl">Produk Terdaftar</div></div>
+    <div class="stat"><div class="num mono" id="statSuppliers">0</div><div class="lbl">Supplier Aktif</div></div>
+    <div class="stat"><div class="num mono" id="statOrders">0</div><div class="lbl">Pesanan Masuk</div></div>
+  </div>
+</section>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab-stamp active" data-tab="supplier">Supplier</button>
+    <button class="tab-stamp" data-tab="pembeli">Pembeli</button>
+  </div>
+</div>
+
+<main>
+
+  <!-- ===================== TAB SUPPLIER ===================== -->
+  <section class="panel active" id="panel-supplier">
+    <div class="grid-2">
+      <div class="card">
+        <h3>Tambah Produk</h3>
+        <div id="supplierLocked" class="locked" style="display:none;">
+          Masuk dengan Google terlebih dahulu untuk menambahkan produk.
+        </div>
+        <form id="productForm">
+          <label for="p_nama">Nama Produk</label>
+          <input type="text" id="p_nama" placeholder="Contoh: Beras Premium 25kg" required>
+
+          <label for="p_jenis">Jenis / Kategori</label>
+          <input type="text" id="p_jenis" placeholder="Contoh: Sembako, Elektronik, Tekstil" required>
+
+          <div class="row-2">
+            <div>
+              <label for="p_harga">Harga (Rp)</label>
+              <input type="number" id="p_harga" min="0" placeholder="150000" required>
+            </div>
+            <div>
+              <label for="p_jumlah">Jumlah / Stok</label>
+              <input type="number" id="p_jumlah" min="0" placeholder="500" required>
+            </div>
+          </div>
+
+          <label for="p_minpesan">Minimal Pesan</label>
+          <input type="number" id="p_minpesan" min="1" placeholder="10" required>
+
+          <button type="submit" class="btn btn-copper" style="width:100%; margin-top:18px;" id="submitProductBtn">
+            Simpan Produk
+          </button>
+          <button type="button" class="btn btn-ghost" style="width:100%; margin-top:8px; display:none;" id="cancelEditBtn">
+            Batal Edit
+          </button>
+        </form>
+      </div>
+
+      <div>
+        <h3 class="display" style="font-size:14px; color:var(--slate); letter-spacing:.08em; margin-bottom:10px;">Produk Saya</h3>
+        <div class="ledger">
+          <div class="ledger-head">
+            <div>Produk</div><div>Jenis</div><div>Harga</div><div>Jumlah</div><div>Min. Pesan</div><div>Ditambahkan</div><div></div>
+          </div>
+          <div id="myProductsList"><div class="ledger-empty">Belum ada produk.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TAB PEMBELI ===================== -->
+  <section class="panel" id="panel-pembeli">
+    <h3 class="display" style="font-size:14px; color:var(--slate); letter-spacing:.08em; margin-bottom:14px;">Katalog Semua Supplier</h3>
+
+    <div class="filter-bar">
+      <input type="text" id="searchInput" placeholder="Cari nama produk...">
+      <select id="filterJenis"><option value="">Semua Jenis</option></select>
+    </div>
+
+    <div class="ledger" style="margin-bottom:34px;">
+      <div class="ledger-head">
+        <div>Produk</div><div>Jenis</div><div>Harga</div><div>Jumlah</div><div>Min. Pesan</div><div>Supplier</div><div></div>
+      </div>
+      <div id="allProductsList"><div class="ledger-empty">Memuat katalog...</div></div>
+    </div>
+
+    <h3 class="display" style="font-size:14px; color:var(--slate); letter-spacing:.08em; margin-bottom:10px;">Pesanan Saya</h3>
+    <div class="ledger">
+      <div class="ledger-head" style="grid-template-columns: 2fr 1fr 1fr 1.3fr 1fr;">
+        <div>Produk</div><div>Jumlah Pesan</div><div>Supplier</div><div>Status</div><div>Tanggal</div>
+      </div>
+      <div id="myOrdersList"><div class="ledger-empty">Belum ada pesanan.</div></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>© <span id="yearEl"></span> NOVASTRA GLOBAL SUPPLY (NG SUPPLY) — MANIFEST DIGITAL</footer>
+
+<!-- ===================== MODAL PESAN ===================== -->
+<div class="overlay" id="orderOverlay">
+  <div class="modal">
+    <h4>Ajukan Pesanan</h4>
+    <p id="orderModalDesc">Masukkan jumlah pesanan.</p>
+    <label for="orderQty">Jumlah Pesan</label>
+    <input type="number" id="orderQty" min="1">
+    <label for="orderPhone">Nomor WhatsApp Anda</label>
+    <input type="tel" id="orderPhone" placeholder="08123456789">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="orderCancelBtn" style="flex:1;">Batal</button>
+      <button class="btn btn-copper" id="orderConfirmBtn" style="flex:1;">Kirim Pesanan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* =======================================================================
+   ⚙️  KONFIGURASI — ISI SEMUA NILAI DI BAWAH INI SEBELUM DIGUNAKAN
+   =======================================================================
+
+   1) FIREBASE CONFIG
+      Ambil dari: Firebase Console → Project Settings → General →
+      "Your apps" → SDK setup and configuration → Config
+
+   2) GOOGLE OAUTH CLIENT ID
+      Ambil dari: Google Cloud Console → APIs & Services → Credentials
+      → OAuth 2.0 Client IDs (Web client). Client ID ini HARUS sama dengan
+      Web client ID yang aktif di Firebase Console →
+      Authentication → Sign-in method → Google → Web SDK configuration.
+
+   3) NAMA PERUSAHAAN — sudah diisi sesuai permintaan, silakan ubah bila perlu.
+   ======================================================================= */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDXXnEyXgnzZqrBiTOkW47kAuV7MyzQ4EM",
+  authDomain: "nodemcu-91530.firebaseapp.com",
+  databaseURL: "https://nodemcu-91530-default-rtdb.firebaseio.com",
+  projectId: "nodemcu-91530",
+  storageBucket: "nodemcu-91530.appspot.com",
+  messagingSenderId: "113192658909",
+  appId: "1:113192658909:web:ed5ae18fa4d708faa2f834",
+  measurementId: "G-HG7WK7ZH7M"
+};
+
+const GOOGLE_CLIENT_ID = "MASUKKAN_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+
+const COMPANY_NAME  = "Novastra Global Supply";
+const COMPANY_SHORT = "NG Supply";
+
+/* ======================= AKHIR KONFIGURASI ======================= */
+
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getDatabase, ref, push, set, update, remove, onValue,
+  query, orderByChild, equalTo, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+document.getElementById("companyNameEl").textContent = COMPANY_NAME;
+document.getElementById("companyShortEl").textContent = COMPANY_SHORT.toUpperCase() + " // TRADE PLATFORM";
+document.title = `${COMPANY_NAME} | ${COMPANY_SHORT}`;
+document.getElementById("yearEl").textContent = new Date().getFullYear();
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+const provider = new GoogleAuthProvider();
+// Client ID Google ditautkan melalui konfigurasi provider Firebase Google Sign-In,
+// yang harus sama dengan GOOGLE_CLIENT_ID di atas (didaftarkan di Firebase Console).
+provider.setCustomParameters({ client_id: GOOGLE_CLIENT_ID, prompt: "select_account" });
+
+let currentUser = null;
+let allProducts = [];
+let myOrders    = [];
+let editingProductId = null;
+
+/* ---------------- Toast ---------------- */
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2600);
+}
+
+/* ---------------- Auth ---------------- */
+const authArea = document.getElementById("authArea");
+
+document.addEventListener("click", (e)=>{
+  if(e.target && e.target.id === "loginBtn"){
+    signInWithPopup(auth, provider).catch(err=>{
+      console.error(err);
+      toast("Gagal masuk: " + err.message);
+    });
+  }
+  if(e.target && e.target.id === "logoutBtn"){
+    signOut(auth);
+  }
+});
+
+onAuthStateChanged(auth, (user)=>{
+  currentUser = user;
+  if(user){
+    authArea.innerHTML = `
+      <div class="user-chip">
+        <img src="${user.photoURL || ''}" alt="">
+        <span>${user.displayName || user.email}</span>
+      </div>
+      <button class="btn btn-outline" id="logoutBtn">Keluar</button>
+    `;
+    document.getElementById("supplierLocked").style.display = "none";
+    document.getElementById("productForm").style.display = "block";
+    document.getElementById("submitProductBtn").disabled = false;
+  } else {
+    authArea.innerHTML = `<button class="btn btn-copper" id="loginBtn">Masuk dengan Google</button>`;
+    document.getElementById("supplierLocked").style.display = "block";
+    document.getElementById("productForm").style.display = "none";
+  }
+  renderMyOrders();
+});
+
+/* ---------------- Tabs ---------------- */
+document.querySelectorAll(".tab-stamp").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab-stamp").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(`panel-${btn.dataset.tab}`).classList.add("active");
+  });
+});
+
+/* ---------------- Helpers ---------------- */
+function formatRupiah(n){
+  return "Rp " + Number(n||0).toLocaleString("id-ID");
+}
+function formatDate(ts){
+  if(!ts) return "-";
+  return new Date(ts).toLocaleDateString("id-ID", { day:"2-digit", month:"short", year:"numeric" });
+}
+
+/* ---------------- Realtime Database: products ---------------- */
+const productsRef = ref(db, "products");
+
+const productForm     = document.getElementById("productForm");
+const submitProductBtn= document.getElementById("submitProductBtn");
+const cancelEditBtn   = document.getElementById("cancelEditBtn");
+
+productForm.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  if(!currentUser){ toast("Masuk dengan Google terlebih dahulu."); return; }
+
+  const nama     = document.getElementById("p_nama").value.trim();
+  const jenis    = document.getElementById("p_jenis").value.trim();
+  const harga    = Number(document.getElementById("p_harga").value);
+  const jumlah   = Number(document.getElementById("p_jumlah").value);
+  const minPesan = Number(document.getElementById("p_minpesan").value);
+
+  if(!nama || !jenis || harga < 0 || jumlah < 0 || minPesan < 1){
+    toast("Periksa kembali data yang dimasukkan.");
+    return;
+  }
+
+  submitProductBtn.disabled = true;
+  submitProductBtn.textContent = editingProductId ? "Menyimpan Perubahan..." : "Menyimpan...";
+
+  try{
+    if(editingProductId){
+      await update(ref(db, `products/${editingProductId}`), {
+        nama, jenis, harga, jumlah, minPesan,
+        updatedAt: serverTimestamp()
+      });
+      toast("Produk berhasil diperbarui.");
+      exitEditMode();
+    } else {
+      const newRef = push(productsRef);
+      await set(newRef, {
+        nama, jenis, harga, jumlah, minPesan,
+        supplierUid: currentUser.uid,
+        supplierName: currentUser.displayName || currentUser.email,
+        supplierEmail: currentUser.email,
+        createdAt: serverTimestamp()
+      });
+      toast("Produk berhasil ditambahkan.");
+    }
+    productForm.reset();
+  }catch(err){
+    console.error(err);
+    toast("Gagal menyimpan produk: " + err.message);
+  }finally{
+    submitProductBtn.disabled = false;
+    submitProductBtn.textContent = editingProductId ? "Simpan Perubahan" : "Simpan Produk";
+  }
+});
+
+function enterEditMode(product){
+  editingProductId = product.id;
+  document.getElementById("p_nama").value = product.nama;
+  document.getElementById("p_jenis").value = product.jenis;
+  document.getElementById("p_harga").value = product.harga;
+  document.getElementById("p_jumlah").value = product.jumlah;
+  document.getElementById("p_minpesan").value = product.minPesan;
+  submitProductBtn.textContent = "Simpan Perubahan";
+  cancelEditBtn.style.display = "block";
+  document.getElementById("p_nama").scrollIntoView({ behavior:"smooth", block:"center" });
+}
+
+function exitEditMode(){
+  editingProductId = null;
+  submitProductBtn.textContent = "Simpan Produk";
+  cancelEditBtn.style.display = "none";
+  productForm.reset();
+}
+
+cancelEditBtn.addEventListener("click", exitEditMode);
+
+// Live listener: semua produk (dipakai untuk tab Pembeli + statistik)
+onValue(productsRef, (snap)=>{
+  const val = snap.val() || {};
+  allProducts = Object.entries(val)
+    .map(([id, p])=>({ id, ...p }))
+    .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  renderAllProducts();
+  renderMyProducts();
+  renderStats();
+  populateJenisFilter();
+}, (err)=>{
+  console.error(err);
+  document.getElementById("allProductsList").innerHTML =
+    `<div class="ledger-empty">Gagal memuat data. Periksa konfigurasi &amp; rules Firebase Anda.</div>`;
+});
+
+function renderMyProducts(){
+  const wrap = document.getElementById("myProductsList");
+  if(!currentUser){
+    wrap.innerHTML = `<div class="ledger-empty">Masuk untuk melihat produk Anda.</div>`;
+    return;
+  }
+  const mine = allProducts.filter(p=>p.supplierUid === currentUser.uid);
+  if(mine.length === 0){
+    wrap.innerHTML = `<div class="ledger-empty">Belum ada produk.</div>`;
+    return;
+  }
+  wrap.innerHTML = mine.map(p=>`
+    <div class="ledger-row">
+      <span class="name" data-label="Produk">${escapeHtml(p.nama)}</span>
+      <span data-label="Jenis"><span class="jenis-badge">${escapeHtml(p.jenis)}</span></span>
+      <span class="price mono" data-label="Harga">${formatRupiah(p.harga)}</span>
+      <span class="mono" data-label="Jumlah">${p.jumlah}</span>
+      <span class="mono" data-label="Min. Pesan">${p.minPesan}</span>
+      <span class="supplier" data-label="Ditambahkan">${formatDate(p.createdAt)}</span>
+      <span style="display:flex; gap:6px;">
+        <button class="btn btn-ghost" style="font-size:12px; padding:6px 10px;" data-edit="${p.id}">Edit</button>
+        <button class="btn btn-danger" data-delete="${p.id}">Hapus</button>
+      </span>
+    </div>
+  `).join("");
+}
+
+document.addEventListener("click", async (e)=>{
+  const editId = e.target.getAttribute && e.target.getAttribute("data-edit");
+  if(editId){
+    const product = allProducts.find(p=>p.id === editId);
+    if(product) enterEditMode(product);
+    return;
+  }
+  const delId = e.target.getAttribute && e.target.getAttribute("data-delete");
+  if(delId){
+    if(!confirm("Hapus produk ini?")) return;
+    try{
+      await remove(ref(db, `products/${delId}`));
+      if(editingProductId === delId) exitEditMode();
+      toast("Produk dihapus.");
+    }catch(err){
+      toast("Gagal menghapus: " + err.message);
+    }
+  }
+});
+
+/* ---------------- Tab Pembeli: katalog ---------------- */
+function populateJenisFilter(){
+  const sel = document.getElementById("filterJenis");
+  const current = sel.value;
+  const jenisSet = [...new Set(allProducts.map(p=>p.jenis).filter(Boolean))].sort();
+  sel.innerHTML = `<option value="">Semua Jenis</option>` +
+    jenisSet.map(j=>`<option value="${escapeHtml(j)}">${escapeHtml(j)}</option>`).join("");
+  sel.value = current;
+}
+
+document.getElementById("searchInput").addEventListener("input", renderAllProducts);
+document.getElementById("filterJenis").addEventListener("change", renderAllProducts);
+
+function renderAllProducts(){
+  const wrap = document.getElementById("allProductsList");
+  const search = document.getElementById("searchInput").value.toLowerCase().trim();
+  const jenisFilter = document.getElementById("filterJenis").value;
+
+  let list = allProducts;
+  if(search) list = list.filter(p=>p.nama.toLowerCase().includes(search));
+  if(jenisFilter) list = list.filter(p=>p.jenis === jenisFilter);
+
+  if(list.length === 0){
+    wrap.innerHTML = `<div class="ledger-empty">Tidak ada produk yang cocok.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = list.map(p=>`
+    <div class="ledger-row">
+      <span class="name" data-label="Produk">${escapeHtml(p.nama)}</span>
+      <span data-label="Jenis"><span class="jenis-badge">${escapeHtml(p.jenis)}</span></span>
+      <span class="price mono" data-label="Harga">${formatRupiah(p.harga)}</span>
+      <span class="mono" data-label="Jumlah">${p.jumlah}</span>
+      <span class="mono" data-label="Min. Pesan">${p.minPesan}</span>
+      <span class="supplier" data-label="Supplier">${escapeHtml(p.supplierName || "-")}</span>
+      <span><button class="btn btn-copper" style="font-size:12px; padding:6px 12px;" data-order="${p.id}">Pesan</button></span>
+    </div>
+  `).join("");
+}
+
+function renderStats(){
+  document.getElementById("statProducts").textContent = allProducts.length;
+  document.getElementById("statSuppliers").textContent = new Set(allProducts.map(p=>p.supplierUid)).size;
+}
+
+/* ---------------- Order modal ---------------- */
+const overlay = document.getElementById("orderOverlay");
+let orderTargetProduct = null;
+
+document.addEventListener("click", (e)=>{
+  const pid = e.target.getAttribute && e.target.getAttribute("data-order");
+  if(pid){
+    if(!currentUser){ toast("Masuk dengan Google untuk memesan."); return; }
+    orderTargetProduct = allProducts.find(p=>p.id === pid);
+    if(!orderTargetProduct) return;
+    document.getElementById("orderModalDesc").textContent =
+      `${orderTargetProduct.nama} — minimal pesan ${orderTargetProduct.minPesan} unit.`;
+    document.getElementById("orderQty").value = orderTargetProduct.minPesan;
+    document.getElementById("orderQty").min = orderTargetProduct.minPesan;
+    document.getElementById("orderPhone").value = "";
+    overlay.classList.add("active");
+  }
+});
+
+document.getElementById("orderCancelBtn").addEventListener("click", ()=>{
+  overlay.classList.remove("active");
+  orderTargetProduct = null;
+});
+
+document.getElementById("orderConfirmBtn").addEventListener("click", async ()=>{
+  if(!orderTargetProduct || !currentUser) return;
+  const qty   = Number(document.getElementById("orderQty").value);
+  const phone = document.getElementById("orderPhone").value.trim();
+
+  if(qty < orderTargetProduct.minPesan){
+    toast(`Jumlah pesan minimal ${orderTargetProduct.minPesan}.`);
+    return;
+  }
+  if(!phone){
+    toast("Nomor WhatsApp wajib diisi.");
+    return;
+  }
+
+  try{
+    const newOrderRef = push(ref(db, "orders"));
+    await set(newOrderRef, {
+      productId: orderTargetProduct.id,
+      productName: orderTargetProduct.nama,
+      harga: orderTargetProduct.harga,
+      supplierUid: orderTargetProduct.supplierUid,
+      supplierName: orderTargetProduct.supplierName,
+      buyerUid: currentUser.uid,
+      buyerName: currentUser.displayName || currentUser.email,
+      buyerEmail: currentUser.email,
+      buyerPhone: phone,
+      jumlahPesan: qty,
+      status: "Menunggu Konfirmasi",
+      createdAt: serverTimestamp()
+    });
+    toast("Pesanan berhasil dikirim.");
+    overlay.classList.remove("active");
+    orderTargetProduct = null;
+  }catch(err){
+    toast("Gagal mengirim pesanan: " + err.message);
+  }
+});
+
+/* ---------------- Orders: pesanan saya ---------------- */
+let unsubOrders = null;
+onAuthStateChanged(auth, (user)=>{
+  if(unsubOrders) unsubOrders();
+  if(!user){ myOrders = []; renderMyOrders(); return; }
+  const qMyOrders = query(ref(db,"orders"), orderByChild("buyerUid"), equalTo(user.uid));
+  unsubOrders = onValue(qMyOrders, (snap)=>{
+    const val = snap.val() || {};
+    myOrders = Object.entries(val)
+      .map(([id,o])=>({ id, ...o }))
+      .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    renderMyOrders();
+    document.getElementById("statOrders").textContent = myOrders.length;
+  });
+});
+
+function renderMyOrders(){
+  const wrap = document.getElementById("myOrdersList");
+  if(!currentUser){
+    wrap.innerHTML = `<div class="ledger-empty">Masuk untuk melihat pesanan Anda.</div>`;
+    return;
+  }
+  if(myOrders.length === 0){
+    wrap.innerHTML = `<div class="ledger-empty">Belum ada pesanan.</div>`;
+    return;
+  }
+  wrap.innerHTML = myOrders.map(o=>`
+    <div class="ledger-row" style="grid-template-columns: 2fr 1fr 1fr 1.3fr 1fr;">
+      <span class="name" data-label="Produk">${escapeHtml(o.productName)}</span>
+      <span class="mono" data-label="Jumlah Pesan">${o.jumlahPesan}</span>
+      <span class="supplier" data-label="Supplier">${escapeHtml(o.supplierName || "-")}</span>
+      <span data-label="Status"><span class="jenis-badge">${escapeHtml(o.status)}</span></span>
+      <span class="supplier" data-label="Tanggal">${formatDate(o.createdAt)}</span>
+    </div>
+  `).join("");
+}
+
+/* ---------------- Utils ---------------- */
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+</script>
+</body>
+</html>
