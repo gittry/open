@@ -67,6 +67,16 @@
   .tab-stamp:nth-child(even){transform:rotate(1deg);}
   .tab-stamp.active{border-style:solid; border-color:var(--copper); color:var(--copper-dark); background:#fff; box-shadow:2px 2px 0 var(--copper); transform:rotate(0);}
 
+  /* Animasi Notifikasi Keranjang Berkedip Merah */
+  @keyframes blinkRedAlert {
+    0%   { background-color: transparent; color: var(--danger); border-color: var(--danger); }
+    50%  { background-color: var(--danger); color: #fff; border-color: var(--danger); }
+    100% { background-color: transparent; color: var(--danger); border-color: var(--danger); }
+  }
+  .cart-alert {
+    animation: blinkRedAlert 1s infinite !important;
+  }
+
   main{max-width:1100px; margin:0 auto; padding:20px 28px 80px;}
   .panel{display:none;} .panel.active{display:block;}
 
@@ -88,7 +98,6 @@
   /* Input Qty Spesifik */
   .qty-input { width: 55px; text-align: center; border: 1px solid var(--line); border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 4px; background:#fff; font-weight:600;}
   .qty-input:focus { outline: 1px solid var(--copper); }
-  /* Hapus arrow bawaan browser di input number */
   .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .qty-input[type=number] { -moz-appearance: textfield; }
 
@@ -126,7 +135,8 @@
 <div class="tabs-wrap">
   <div class="tabs">
     <button class="tab-stamp active" data-tab="katalog">Katalog Produk</button>
-    <button class="tab-stamp" data-tab="keranjang">🛒 Keranjang (<span id="cartCount">0</span>)</button>
+    <!-- Menambahkan ID tabKeranjang untuk target animasi -->
+    <button class="tab-stamp" data-tab="keranjang" id="tabKeranjang">🛒 Keranjang (<span id="cartCount">0</span>)</button>
     <button class="tab-stamp" data-tab="pesanan">Pesanan Saya</button>
   </div>
 </div>
@@ -208,7 +218,7 @@ const db = getDatabase(app);
 let currentUser = null;
 let userData = null;
 let allProducts = [];
-let cart = []; // Array of { productId, nama, harga, qty, supplierUid, minPesan }
+let cart = []; 
 let myOrders = [];
 
 // Utilitas
@@ -222,13 +232,18 @@ function formatDate(ts){
   return new Date(ts).toLocaleString("id-ID", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
 }
 
-// Navigasi Tab
+// Navigasi Tab (Ditambah logika penghapusan animasi kedip merah)
 document.querySelectorAll(".tab-stamp").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     document.querySelectorAll(".tab-stamp").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById(`panel-${btn.dataset.tab}`).classList.add("active");
+    
+    // Matikan kedip merah jika tab keranjang di-klik
+    if(btn.dataset.tab === "keranjang"){
+      btn.classList.remove("cart-alert");
+    }
   });
 });
 
@@ -244,7 +259,6 @@ onAuthStateChanged(auth, async (user) => {
     const userSnap = await get(ref(db, `users/${user.uid}`));
     if(userSnap.exists()){
       userData = userSnap.val();
-      // OTORISASI: Hanya Pembeli & Admin yang boleh masuk
       if(userData.level === 'pembeli' || userData.level === 'admin') {
         currentUser = user;
         document.getElementById("authArea").innerHTML = `
@@ -282,7 +296,6 @@ function renderKatalog() {
     wrap.innerHTML = `<div class="ledger-empty">Tidak ada produk.</div>`; return;
   }
 
-  // Tidak ada pemanggilan nama/alamat supplier di sini.
   wrap.innerHTML = filtered.map(p=>`
     <div class="ledger-row col-katalog">
       <span style="font-weight:600; color:var(--navy);">${p.nama}</span>
@@ -319,10 +332,16 @@ window.addToCart = function(productId) {
     });
     toast("Produk masuk ke keranjang.");
   }
+  
   updateCartUI();
+
+  // Animasi Keranjang Berkedip Merah
+  const tabKeranjang = document.getElementById("tabKeranjang");
+  if(!tabKeranjang.classList.contains("active")) {
+    tabKeranjang.classList.add("cart-alert");
+  }
 }
 
-// Handler Tombol Minus/Plus
 window.ubahQtyBtn = function(index, delta) {
   const item = cart[index];
   const newQty = item.qty + delta;
@@ -334,14 +353,13 @@ window.ubahQtyBtn = function(index, delta) {
   updateCartUI();
 }
 
-// Handler saat user langsung mengetik di kolom Input Qty
 window.ketikQty = function(index, inputVal) {
   const item = cart[index];
   let newQty = parseInt(inputVal);
   
   if(isNaN(newQty) || newQty < item.minPesan) {
     alert(`Gagal. Minimal order untuk produk ini adalah ${item.minPesan}.`);
-    newQty = item.minPesan; // Reset ke minimal pesan
+    newQty = item.minPesan; 
   }
   item.qty = newQty;
   updateCartUI();
@@ -379,7 +397,7 @@ function updateCartUI() {
   document.getElementById("btnCheckout").disabled = false;
 }
 
-/* ---------------- 4. CHECKOUT (CREATE MAIN ORDER) ---------------- */
+/* ---------------- 4. CHECKOUT & PENGURANGAN STOK OTOMATIS ---------------- */
 async function recordOrderHistory(orderId, note) {
   await push(ref(db, `order_updates/${orderId}`), {
     waktu: serverTimestamp(),
@@ -412,7 +430,7 @@ document.getElementById("btnCheckout").addEventListener("click", async () => {
       buyerName: userData.nama,
       buyerPerusahaan: userData.perusahaan || "-",
       totalHarga: totalPrice,
-      tglPengiriman: tglKirimVal, // <--- Simpan tanggal
+      tglPengiriman: tglKirimVal, 
       status: "Pesanan Dibuat", 
       items: itemsObj,
       createdAt: serverTimestamp(),
@@ -420,6 +438,31 @@ document.getElementById("btnCheckout").addEventListener("click", async () => {
     });
 
     await recordOrderHistory(orderRef.key, `Pesanan dibuat. Meminta pengiriman pada ${tglKirimVal}.`);
+
+    // LOGIKA BARU: PENGURANGAN STOK DAN PENCATATAN HISTORI PRODUK
+    for (let c of cart) {
+      const currentProd = allProducts.find(p => p.id === c.productId);
+      if(currentProd) {
+        let sisaStok = currentProd.jumlah - c.qty;
+        if(sisaStok < 0) sisaStok = 0; // Proteksi agar stok tidak minus
+
+        // 1. Kurangi nilai stok di node products
+        await update(ref(db, `products/${c.productId}`), {
+          jumlah: sisaStok,
+          updatedAt: serverTimestamp()
+        });
+
+        // 2. Catat bukti pengurangan stok ke product_updates (Audit Trail)
+        await push(ref(db, `product_updates`), {
+          productId: c.productId,
+          productName: c.nama,
+          action: "STOK BERKURANG (Checkout)",
+          detail: `Stok dikurangi ${c.qty} unit untuk pesanan #${orderRef.key.slice(0,6).toUpperCase()}. Sisa stok: ${sisaStok}.`,
+          actor: `Pembeli - ${userData.nama}`,
+          timestamp: serverTimestamp()
+        });
+      }
+    }
 
     cart = []; updateCartUI();
     toast("Berhasil Checkout!");
@@ -445,7 +488,6 @@ function loadMyOrders() {
     myOrders = [];
     snapshot.forEach(child => { myOrders.push({ id: child.key, ...child.val() }); });
     
-    // Sort & Check Kadaluarsa
     cekKadaluarsaSistem();
 
     myOrders.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
@@ -457,28 +499,21 @@ function cekKadaluarsaSistem() {
   const sekarang = new Date();
   
   myOrders.forEach(async (order) => {
-    // Daftar status aman / sudah selesai / sudah batal
     const statusAman = ["Pesanan Selesai Lunas", "Pesanan Selesai Belum Bayar", "Selesai", "Kadaluarsa", "Dibatalkan Pembeli", "Dibatalkan"];
     
-    // Jika status saat ini BUKAN status aman, cek tanggalnya
     if (!statusAman.includes(order.status) && order.tglPengiriman) {
       
       const batasWaktu = new Date(order.tglPengiriman);
-      // Set jam ke 23:59:59 di hari H (Batas akhir hari tersebut)
       batasWaktu.setHours(23, 59, 59, 999); 
       
-      // Jika waktu sekarang melebihi akhir hari dari tempo pengiriman
       if (sekarang.getTime() > batasWaktu.getTime()) {
         try {
-          // Update status otomatis menjadi Kadaluarsa di Firebase
           await update(ref(db, `main_orders/${order.id}`), { 
             status: "Kadaluarsa", 
             updatedAt: serverTimestamp() 
           });
           
           await recordOrderHistory(order.id, "Sistem Otomatis: Pesanan dibatalkan karena telah melewati batas tempo pengiriman dan belum diselesaikan.");
-          
-          // Update status di lokal array agar langsung tereflek
           order.status = "Kadaluarsa"; 
         } catch (err) {
           console.error("Gagal update status kadaluarsa:", err);
@@ -531,7 +566,6 @@ function renderMyOrders() {
       actionButtons += `<button class="btn btn-danger" onclick="batalkanOrder('${order.id}')">Batalkan Semua</button>`;
     }
 
-    // Format tampilan tanggal tempo
     let strTempo = order.tglPengiriman ? new Date(order.tglPengiriman).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'}) : "-";
 
     return `
@@ -568,7 +602,6 @@ function renderMyOrders() {
   }).join("");
 }
 
-// Logika Pembatalan Penuh
 window.batalkanOrder = async function(orderId) {
   if(!confirm("Anda yakin ingin membatalkan seluruh pesanan ini?")) return;
   try {
@@ -576,17 +609,29 @@ window.batalkanOrder = async function(orderId) {
     let itemsUpdate = {};
     for(let key in order.items) {
       itemsUpdate[`items/${key}/status`] = "Dibatalkan";
+      
+      // LOGIKA TAMBAHAN: MENGEMBALIKAN STOK JIKA DIBATALKAN
+      const currentProd = allProducts.find(p => p.id === order.items[key].productId);
+      if(currentProd) {
+        let restoredStock = currentProd.jumlah + order.items[key].qty;
+        await update(ref(db, `products/${currentProd.id}`), { jumlah: restoredStock, updatedAt: serverTimestamp() });
+        await push(ref(db, `product_updates`), {
+          productId: currentProd.id, productName: currentProd.nama,
+          action: "STOK KEMBALI (Dibatalkan)",
+          detail: `Pesanan #${orderId.slice(0,6).toUpperCase()} dibatalkan. Stok dikembalikan ${order.items[key].qty} unit. Sisa: ${restoredStock}.`,
+          actor: `Pembeli - ${userData.nama}`, timestamp: serverTimestamp()
+        });
+      }
     }
     itemsUpdate["status"] = "Dibatalkan Pembeli";
     itemsUpdate["updatedAt"] = serverTimestamp();
 
     await update(ref(db, `main_orders/${orderId}`), itemsUpdate);
-    await recordOrderHistory(orderId, "Pembeli membatalkan seluruh pesanan.");
+    await recordOrderHistory(orderId, "Pembeli membatalkan seluruh pesanan. Stok produk telah dikembalikan.");
     toast("Pesanan dibatalkan.");
   } catch (err) { toast("Gagal membatalkan: " + err.message); }
 }
 
-// Logika Lanjutkan (Parsial)
 window.lanjutkanOrder = async function(orderId) {
   if(!confirm("Lanjutkan hanya dengan barang yang sudah diproses supplier? Barang lain akan otomatis dibatalkan.")) return;
   try {
@@ -601,6 +646,19 @@ window.lanjutkanOrder = async function(orderId) {
         newTotal += (item.harga * item.qty);
       } else {
         itemsUpdate[`items/${key}/status`] = "Dibatalkan Otomatis (Checkout Parsial)";
+        
+        // Kembalikan stok untuk item yang batal parsial
+        const currentProd = allProducts.find(p => p.id === item.productId);
+        if(currentProd) {
+          let restoredStock = currentProd.jumlah + item.qty;
+          await update(ref(db, `products/${currentProd.id}`), { jumlah: restoredStock, updatedAt: serverTimestamp() });
+          await push(ref(db, `product_updates`), {
+            productId: currentProd.id, productName: currentProd.nama,
+            action: "STOK KEMBALI (Batal Parsial)",
+            detail: `Checkout Parsial #${orderId.slice(0,6).toUpperCase()}. Stok dikembalikan ${item.qty} unit. Sisa: ${restoredStock}.`,
+            actor: `Sistem (Pembeli: ${userData.nama})`, timestamp: serverTimestamp()
+          });
+        }
       }
     }
     
@@ -609,7 +667,7 @@ window.lanjutkanOrder = async function(orderId) {
     itemsUpdate["updatedAt"] = serverTimestamp();
 
     await update(ref(db, `main_orders/${orderId}`), itemsUpdate);
-    await recordOrderHistory(orderId, "Pembeli melakukan konfirmasi parsial. Menyesuaikan total harga.");
+    await recordOrderHistory(orderId, "Pembeli melakukan konfirmasi parsial. Menyesuaikan total harga. Stok item yang tidak diproses telah dikembalikan.");
     toast("Pesanan dilanjutkan dengan penyesuaian harga.");
   } catch (err) { toast("Gagal: " + err.message); }
 }
@@ -622,7 +680,6 @@ window.cetakNota = function(orderId) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   
-  // Kop Surat
   doc.setFontSize(22);
   doc.setTextColor(11, 30, 51);
   doc.text("NOVASTRA GLOBAL SUPPLY", 14, 20);
@@ -634,7 +691,6 @@ window.cetakNota = function(orderId) {
   doc.setLineWidth(0.5);
   doc.line(14, 30, 196, 30);
 
-  // Info Order
   doc.setFontSize(12);
   doc.setTextColor(0,0,0);
   doc.text("INVOICE / NOTA PESANAN", 14, 40);
@@ -650,7 +706,6 @@ window.cetakNota = function(orderId) {
   doc.text(`Pemesan    : ${order.buyerName}`, 120, 48);
   doc.text(`Perusahaan : ${order.buyerPerusahaan}`, 120, 53);
 
-  // Tabel Barang
   const tableHeaders = [["No", "Nama Barang", "Status Sub-Order", "Harga Satuan", "Qty", "Subtotal"]];
   const items = Object.values(order.items || {});
   let tableRows = [];
@@ -685,7 +740,6 @@ window.cetakNota = function(orderId) {
   doc.save(`Invoice_NG_${order.id.slice(0,6)}.pdf`);
   toast("Nota PDF berhasil diunduh.");
 }
-
 </script>
 </body>
 </html>
