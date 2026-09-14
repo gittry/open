@@ -6,7 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Kasir & Keuangan</title>
+<title>Kasir & Keuangan2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -60,13 +60,24 @@
     display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;font-weight:800;
   }
   .login-card h1{font-size:22px; margin:0 0 6px; color:var(--blue-900);}
-  .login-card p{color:var(--muted); font-size:14px; margin:0 0 26px; line-height:1.5;}
+  .login-card p{color:var(--muted); font-size:14px; margin:0 0 20px; line-height:1.5;}
+  
+  /* Status Koneksi Firebase */
+  #dbConnectionStatus {
+    font-size: 13px; font-weight: 600; margin-bottom: 20px; padding: 10px; border-radius: var(--radius-sm);
+    transition: all 0.3s ease;
+  }
+  .status-connecting { background: #FFF3CD; color: #856404; }
+  .status-connected { background: #E4F7EE; color: var(--success); }
+  .status-error { background: #F3C8C5; color: var(--danger); }
+
   .btn-google{
     width:100%; min-height:var(--tap); border-radius:var(--radius-md); border:1.5px solid var(--line);
     background:#fff; color:var(--ink); font-size:15px; font-weight:600;
-    display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer; transition: .2s;
   }
-  .btn-google:active{background:var(--blue-50);}
+  .btn-google:active:not(:disabled){background:var(--blue-50);}
+  .btn-google:disabled{opacity:0.5; cursor:not-allowed; background:#f0f0f0;}
   .status-line{margin-top:16px; font-size:13px; color:var(--muted); min-height:18px;}
 
   #pendingScreen{display:none; flex:1; align-items:center; justify-content:center; padding:24px; text-align:center;}
@@ -240,7 +251,13 @@
     <div class="login-mark">K</div>
     <h1>Kasir & Keuangan</h1>
     <p>Masuk dengan akun Google untuk mengakses sistem kasir dan keuangan.</p>
-    <button class="btn-google" id="googleBtn">
+    
+    <!-- Status Koneksi Database -->
+    <div id="dbConnectionStatus" class="status-connecting">
+      ⏳ Mengecek koneksi aman ke server...
+    </div>
+
+    <button class="btn-google" id="googleBtn" disabled>
       <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.09-1.8 2.73v2.27h2.9c1.7-1.57 2.7-3.87 2.7-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.17l-2.9-2.27c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.34C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 013.65 9c0-.59.1-1.17.3-1.7V4.96H.96A9 9 0 000 9c0 1.45.35 2.83.96 4.04l2.99-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l2.99 2.34C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
       Masuk dengan Google
     </button>
@@ -407,12 +424,22 @@ const firebaseConfig = {
   appId: "1:113192658909:web:ed5ae18fa4d708faa2f834"
 };
 
-const GOOGLE_CLIENT_ID = "113192658909-jcurln3aqrco5ll8lvjej897673u0aop.apps.googleusercontent.com";
+let auth, db;
+try {
+  // Inisialisasi Firebase
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.database();
+} catch (error) {
+  document.body.innerHTML = `
+    <div style="padding:40px; text-align:center; color:#D5473F;">
+      <h1 style="margin-bottom:10px;">❌ Error Sistem</h1>
+      <p>Gagal menginisialisasi Firebase. Periksa konfigurasi API Anda.</p>
+      <pre style="margin-top:20px; font-size:12px; color:#5C7191;">Detail: ${error.message}</pre>
+    </div>
+  `;
+}
 /* ======================= AKHIR KONFIGURASI ======================= */
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
 
 /* ---------- Role / Tab access control ---------- */
 const TABS = [
@@ -429,7 +456,7 @@ const TABS = [
 let currentUser = null;
 let currentRole = null;
 let wakeLock = null;
-let cart = [];           // {id, name, price, qty}
+let cart = [];
 let selectedTableId = null;
 let selectedPayMethod = 'CASH';
 let productsCache = {};
@@ -446,6 +473,24 @@ function toast(msg){
 }
 function todayKey(){
   const d = new Date(); return d.toISOString().slice(0,10);
+}
+
+/* ---------- CEK KONEKSI FIREBASE (REALTIME) ---------- */
+if(db) {
+  const connStatus = $('#dbConnectionStatus');
+  const googleBtn = $('#googleBtn');
+
+  db.ref('.info/connected').on('value', function(snap) {
+    if (snap.val() === true) {
+      connStatus.textContent = '✅ Terhubung ke Firebase Aman';
+      connStatus.className = 'status-connected';
+      googleBtn.disabled = false; // Buka akses login jika sudah aman
+    } else {
+      connStatus.textContent = '❌ Terputus. Mengecek jaringan...';
+      connStatus.className = 'status-error';
+      googleBtn.disabled = true; // Kunci akses jika gagal terhubung
+    }
+  });
 }
 
 /* ---------- Wake Lock (anti sleep display) ---------- */
@@ -478,12 +523,13 @@ $('#wakeSwitch').addEventListener('change', (e)=>{
 
 /* ---------- Auth ---------- */
 $('#googleBtn').addEventListener('click', async ()=>{
+  if($('#googleBtn').disabled) return;
   $('#loginStatus').textContent = 'Membuka jendela masuk...';
   const provider = new firebase.auth.GoogleAuthProvider();
   try{
     await auth.signInWithPopup(provider);
   }catch(err){
-    $('#loginStatus').textContent = 'Gagal masuk: ' + (err.message || err.code);
+    $('#loginStatus').innerHTML = `<span style="color:var(--danger)">Gagal masuk: ${err.message}</span>`;
   }
 });
 $('#pendingSignOut').addEventListener('click', ()=> auth.signOut());
@@ -491,52 +537,66 @@ $('#userChip').addEventListener('click', ()=>{
   if(confirm('Keluar dari akun ini?')) auth.signOut();
 });
 
-auth.onAuthStateChanged(async (user) => {
-  if(!user){
-    currentUser = null; currentRole = null;
-    $('#loginScreen').style.display = 'flex';
-    $('#pendingScreen').style.display = 'none';
-    $('#app').style.display = 'none';
-    releaseWakeLock();
-    return;
-  }
-  currentUser = user;
-  $('#loginStatus').textContent = 'Memeriksa akun...';
-
-  const userRef = db.ref('users/' + user.uid);
-  const snap = await userRef.get();
-  if(!snap.exists()){
-    // Bootstrap: the very first user to ever sign in becomes ADMIN automatically
-    const usersSnap = await db.ref('users').get();
-    const isFirstUser = !usersSnap.exists();
-    await userRef.set({
-      name: user.displayName || '',
-      email: user.email || '',
-      photo: user.photoURL || '',
-      role: isFirstUser ? 'ADMIN' : 'PENDING',
-      created_at: firebase.database.ServerValue.TIMESTAMP
-    });
-  }
-
-  userRef.on('value', (s) => {
-    const data = s.val() || {};
-    currentRole = data.role || 'PENDING';
-    if(currentRole === 'PENDING'){
-      $('#loginScreen').style.display = 'none';
-      $('#pendingScreen').style.display = 'flex';
+if(auth) {
+  auth.onAuthStateChanged(async (user) => {
+    if(!user){
+      currentUser = null; currentRole = null;
+      $('#loginScreen').style.display = 'flex';
+      $('#pendingScreen').style.display = 'none';
       $('#app').style.display = 'none';
+      releaseWakeLock();
       return;
     }
-    $('#loginScreen').style.display = 'none';
-    $('#pendingScreen').style.display = 'none';
-    $('#app').style.display = 'flex';
-    $('#userPhoto').src = data.photo || user.photoURL || '';
-    $('#userNameShort').textContent = (data.name || user.displayName || '').split(' ')[0];
-    $('#roleBadge').textContent = currentRole;
-    buildTabs();
-    if($('#wakeSwitch').checked) requestWakeLock();
+    currentUser = user;
+    $('#loginStatus').textContent = 'Memeriksa otoritas akun...';
+
+    try {
+      const userRef = db.ref('users/' + user.uid);
+      const snap = await userRef.get();
+      
+      if(!snap.exists()){
+        $('#loginStatus').textContent = 'Mendaftarkan pengguna baru...';
+        
+        // Optimasi Cek User Pertama: 
+        // Menggunakan limitToFirst(1) agar aman dan tidak membebani memori 
+        // jika data user nantinya sudah ribuan
+        const usersSnap = await db.ref('users').limitToFirst(1).get();
+        const isFirstUser = !usersSnap.exists(); 
+        
+        await userRef.set({
+          name: user.displayName || '',
+          email: user.email || '',
+          photo: user.photoURL || '',
+          role: isFirstUser ? 'ADMIN' : 'PENDING',
+          created_at: firebase.database.ServerValue.TIMESTAMP
+        });
+        
+        toast(isFirstUser ? 'Anda terdaftar sebagai ADMIN pertama' : 'Akun didaftarkan, silakan tunggu persetujuan');
+      }
+
+      userRef.on('value', (s) => {
+        const data = s.val() || {};
+        currentRole = data.role || 'PENDING';
+        if(currentRole === 'PENDING'){
+          $('#loginScreen').style.display = 'none';
+          $('#pendingScreen').style.display = 'flex';
+          $('#app').style.display = 'none';
+          return;
+        }
+        $('#loginScreen').style.display = 'none';
+        $('#pendingScreen').style.display = 'none';
+        $('#app').style.display = 'flex';
+        $('#userPhoto').src = data.photo || user.photoURL || '';
+        $('#userNameShort').textContent = (data.name || user.displayName || '').split(' ')[0];
+        $('#roleBadge').textContent = currentRole;
+        buildTabs();
+        if($('#wakeSwitch').checked) requestWakeLock();
+      });
+    } catch (error) {
+      $('#loginStatus').innerHTML = `<span style="color:var(--danger)">Gagal membaca data base: ${error.message}</span>`;
+    }
   });
-});
+}
 
 /* ---------- Tab building / navigation ---------- */
 function buildTabs(){
@@ -563,12 +623,14 @@ function switchTab(id){
 }
 
 /* ---------- Products ---------- */
-db.ref('products/items').on('value', (snap) => {
-  productsCache = snap.val() || {};
-  renderCategories();
-  renderProductGrid();
-  renderProductList();
-});
+if(db) {
+  db.ref('products/items').on('value', (snap) => {
+    productsCache = snap.val() || {};
+    renderCategories();
+    renderProductGrid();
+    renderProductList();
+  });
+}
 function renderCategories(){
   const cats = new Set(['Semua']);
   Object.values(productsCache).forEach(p => { if(p.category) cats.add(p.category); });
@@ -692,11 +754,13 @@ $('#checkoutBtn').addEventListener('click', async ()=>{
 });
 
 /* ---------- Tables ---------- */
-db.ref('tables').on('value', (snap)=>{
-  tablesCache = snap.val() || {};
-  renderTables();
-  renderCart();
-});
+if(db) {
+  db.ref('tables').on('value', (snap)=>{
+    tablesCache = snap.val() || {};
+    renderTables();
+    renderCart();
+  });
+}
 function renderTables(){
   const grid = $('#tableGrid'); grid.innerHTML = '';
   const entries = Object.entries(tablesCache);
@@ -726,10 +790,16 @@ $('#addProdBtn').addEventListener('click', async ()=>{
   const price = parseFloat($('#newProdPrice').value);
   const category = $('#newProdCat').value.trim() || 'Umum';
   if(!name || !price){ toast('Isi nama dan harga produk'); return; }
-  await db.ref('products/items').push({ name, price, category, active:true, created_at: firebase.database.ServerValue.TIMESTAMP });
-  $('#newProdName').value=''; $('#newProdPrice').value=''; $('#newProdCat').value='';
-  toast('Produk ditambahkan');
+  
+  try {
+    await db.ref('products/items').push({ name, price, category, active:true, created_at: firebase.database.ServerValue.TIMESTAMP });
+    $('#newProdName').value=''; $('#newProdPrice').value=''; $('#newProdCat').value='';
+    toast('Produk ditambahkan');
+  } catch (err) {
+    toast('Gagal menambahkan produk: ' + err.message);
+  }
 });
+
 function renderProductList(){
   const wrap = $('#productList'); wrap.innerHTML = '';
   const entries = Object.entries(productsCache);
@@ -749,47 +819,55 @@ function renderProductList(){
 
 /* ---------- Dashboard ---------- */
 async function loadDashboard(){
-  const key = todayKey();
-  const ordersSnap = await db.ref('pos/orders').orderByChild('date_key').equalTo(key).get();
-  const orders = ordersSnap.val() || {};
-  let totalSales = 0, cash = 0, nonCash = 0;
-  const list = Object.values(orders).sort((a,b)=> (b.created_at||0)-(a.created_at||0));
-  list.forEach(o => {
-    totalSales += o.total || 0;
-    if(o.payment_method === 'CASH') cash += o.total || 0; else nonCash += o.total || 0;
-  });
-  $('#dashSales').textContent = rupiah(totalSales);
-  $('#dashOrders').textContent = list.length + ' transaksi';
-  $('#dashCash').textContent = rupiah(cash);
-  $('#dashNonCash').textContent = rupiah(nonCash);
-  const occupied = Object.values(tablesCache).filter(t=>t.status==='OCCUPIED').length;
-  $('#dashTables').textContent = occupied + '/' + Object.keys(tablesCache).length;
+  try {
+    const key = todayKey();
+    const ordersSnap = await db.ref('pos/orders').orderByChild('date_key').equalTo(key).get();
+    const orders = ordersSnap.val() || {};
+    let totalSales = 0, cash = 0, nonCash = 0;
+    const list = Object.values(orders).sort((a,b)=> (b.created_at||0)-(a.created_at||0));
+    list.forEach(o => {
+      totalSales += o.total || 0;
+      if(o.payment_method === 'CASH') cash += o.total || 0; else nonCash += o.total || 0;
+    });
+    $('#dashSales').textContent = rupiah(totalSales);
+    $('#dashOrders').textContent = list.length + ' transaksi';
+    $('#dashCash').textContent = rupiah(cash);
+    $('#dashNonCash').textContent = rupiah(nonCash);
+    const occupied = Object.values(tablesCache).filter(t=>t.status==='OCCUPIED').length;
+    $('#dashTables').textContent = occupied + '/' + Object.keys(tablesCache).length;
 
-  const recentWrap = $('#dashRecent'); recentWrap.innerHTML = '';
-  if(list.length === 0){ recentWrap.innerHTML = '<div class="empty-state"><div class="ic">🧾</div>Belum ada transaksi hari ini.</div>'; }
-  list.slice(0,8).forEach(o => {
-    const row = document.createElement('div');
-    row.className = 'list-card';
-    const time = o.created_at ? new Date(o.created_at).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}) : '';
-    row.innerHTML = `<div class="lc-main"><div class="lc-title">${(o.items||[]).length} item • ${o.payment_method}</div><div class="lc-sub">${time} • ${o.cashier_name||''}</div></div><div class="lc-amount">${rupiah(o.total)}</div>`;
-    recentWrap.appendChild(row);
-  });
+    const recentWrap = $('#dashRecent'); recentWrap.innerHTML = '';
+    if(list.length === 0){ recentWrap.innerHTML = '<div class="empty-state"><div class="ic">🧾</div>Belum ada transaksi hari ini.</div>'; }
+    list.slice(0,8).forEach(o => {
+      const row = document.createElement('div');
+      row.className = 'list-card';
+      const time = o.created_at ? new Date(o.created_at).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}) : '';
+      row.innerHTML = `<div class="lc-main"><div class="lc-title">${(o.items||[]).length} item • ${o.payment_method}</div><div class="lc-sub">${time} • ${o.cashier_name||''}</div></div><div class="lc-amount">${rupiah(o.total)}</div>`;
+      recentWrap.appendChild(row);
+    });
+  } catch (error) {
+    toast('Gagal memuat Dasbor: ' + error.message);
+  }
 }
 
 /* ---------- Reports (admin) ---------- */
 async function loadReports(){
-  const snap = await db.ref('pos/orders').limitToLast(50).get();
-  const orders = snap.val() || {};
-  const list = Object.values(orders).sort((a,b)=> (b.created_at||0)-(a.created_at||0));
-  const wrap = $('#reportOrders'); wrap.innerHTML = '';
-  if(list.length === 0){ wrap.innerHTML = '<div class="empty-state"><div class="ic">📈</div>Belum ada data transaksi.</div>'; return; }
-  list.forEach(o => {
-    const row = document.createElement('div');
-    row.className = 'list-card';
-    const date = o.created_at ? new Date(o.created_at).toLocaleString('id-ID') : '';
-    row.innerHTML = `<div class="lc-main"><div class="lc-title">${(o.items||[]).map(i=>i.name+' x'+i.qty).join(', ')}</div><div class="lc-sub">${date} • ${o.payment_method}</div></div><div class="lc-amount">${rupiah(o.total)}</div>`;
-    wrap.appendChild(row);
-  });
+  try {
+    const snap = await db.ref('pos/orders').limitToLast(50).get();
+    const orders = snap.val() || {};
+    const list = Object.values(orders).sort((a,b)=> (b.created_at||0)-(a.created_at||0));
+    const wrap = $('#reportOrders'); wrap.innerHTML = '';
+    if(list.length === 0){ wrap.innerHTML = '<div class="empty-state"><div class="ic">📈</div>Belum ada data transaksi.</div>'; return; }
+    list.forEach(o => {
+      const row = document.createElement('div');
+      row.className = 'list-card';
+      const date = o.created_at ? new Date(o.created_at).toLocaleString('id-ID') : '';
+      row.innerHTML = `<div class="lc-main"><div class="lc-title">${(o.items||[]).map(i=>i.name+' x'+i.qty).join(', ')}</div><div class="lc-sub">${date} • ${o.payment_method}</div></div><div class="lc-amount">${rupiah(o.total)}</div>`;
+      wrap.appendChild(row);
+    });
+  } catch(error) {
+    toast('Gagal memuat laporan: ' + error.message);
+  }
 }
 
 /* ---------- Finance (admin) ---------- */
@@ -797,75 +875,96 @@ $('#addExpenseBtn').addEventListener('click', async ()=>{
   const desc = $('#expDesc').value.trim();
   const amount = parseFloat($('#expAmount').value);
   if(!desc || !amount){ toast('Isi deskripsi dan jumlah'); return; }
-  await db.ref('finance/expenses').push({
-    description:desc, amount, created_by:currentUser.uid, created_at: firebase.database.ServerValue.TIMESTAMP
-  });
-  $('#expDesc').value=''; $('#expAmount').value='';
-  toast('Pengeluaran dicatat');
-  loadFinance();
+  
+  try {
+    await db.ref('finance/expenses').push({
+      description:desc, amount, created_by:currentUser.uid, created_at: firebase.database.ServerValue.TIMESTAMP
+    });
+    $('#expDesc').value=''; $('#expAmount').value='';
+    toast('Pengeluaran dicatat');
+    loadFinance();
+  } catch(error) {
+    toast('Gagal mencatat pengeluaran: ' + error.message);
+  }
 });
-async function loadFinance(){
-  const [ordersSnap, expSnap] = await Promise.all([
-    db.ref('pos/orders').get(), db.ref('finance/expenses').get()
-  ]);
-  const orders = Object.values(ordersSnap.val() || {});
-  const expenses = expSnap.val() || {};
-  let cash=0, nonCash=0, totalExp=0;
-  orders.forEach(o => { if(o.payment_method==='CASH') cash += o.total||0; else nonCash += o.total||0; });
-  Object.values(expenses).forEach(e => totalExp += e.amount||0);
-  $('#finCash').textContent = rupiah(cash);
-  $('#finNonCash').textContent = rupiah(nonCash);
-  $('#finExpense').textContent = rupiah(totalExp);
 
-  const wrap = $('#expenseList'); wrap.innerHTML = '';
-  const list = Object.entries(expenses).sort((a,b)=> (b[1].created_at||0)-(a[1].created_at||0));
-  if(list.length === 0){ wrap.innerHTML = '<div class="empty-state"><div class="ic">💸</div>Belum ada pengeluaran.</div>'; return; }
-  list.forEach(([id,e]) => {
-    const row = document.createElement('div');
-    row.className = 'list-card';
-    const date = e.created_at ? new Date(e.created_at).toLocaleString('id-ID') : '';
-    row.innerHTML = `<div class="lc-main"><div class="lc-title">${e.description}</div><div class="lc-sub">${date}</div></div><div class="lc-amount">-${rupiah(e.amount)}</div>`;
-    wrap.appendChild(row);
-  });
+async function loadFinance(){
+  try {
+    const [ordersSnap, expSnap] = await Promise.all([
+      db.ref('pos/orders').get(), db.ref('finance/expenses').get()
+    ]);
+    const orders = Object.values(ordersSnap.val() || {});
+    const expenses = expSnap.val() || {};
+    let cash=0, nonCash=0, totalExp=0;
+    orders.forEach(o => { if(o.payment_method==='CASH') cash += o.total||0; else nonCash += o.total||0; });
+    Object.values(expenses).forEach(e => totalExp += e.amount||0);
+    $('#finCash').textContent = rupiah(cash);
+    $('#finNonCash').textContent = rupiah(nonCash);
+    $('#finExpense').textContent = rupiah(totalExp);
+
+    const wrap = $('#expenseList'); wrap.innerHTML = '';
+    const list = Object.entries(expenses).sort((a,b)=> (b[1].created_at||0)-(a[1].created_at||0));
+    if(list.length === 0){ wrap.innerHTML = '<div class="empty-state"><div class="ic">💸</div>Belum ada pengeluaran.</div>'; return; }
+    list.forEach(([id,e]) => {
+      const row = document.createElement('div');
+      row.className = 'list-card';
+      const date = e.created_at ? new Date(e.created_at).toLocaleString('id-ID') : '';
+      row.innerHTML = `<div class="lc-main"><div class="lc-title">${e.description}</div><div class="lc-sub">${date}</div></div><div class="lc-amount">-${rupiah(e.amount)}</div>`;
+      wrap.appendChild(row);
+    });
+  } catch(error) {
+    toast('Gagal memuat keuangan: ' + error.message);
+  }
 }
 
 /* ---------- Users / roles (admin) ---------- */
 async function loadUsers(){
-  const snap = await db.ref('users').get();
-  const users = snap.val() || {};
-  const wrap = $('#userList'); wrap.innerHTML = '';
-  const entries = Object.entries(users);
-  if(entries.length === 0){ wrap.innerHTML = '<div class="empty-state"><div class="ic">👤</div>Belum ada pengguna.</div>'; return; }
-  entries.forEach(([uid, u]) => {
-    const row = document.createElement('div');
-    row.className = 'list-card';
-    row.innerHTML = `<div class="lc-main"><div class="lc-title">${u.name || u.email}</div><div class="lc-sub">${u.email||''}</div></div>`;
-    const select = document.createElement('select');
-    select.className = 'role-select';
-    ['PENDING','CASHIER','ADMIN'].forEach(r => {
-      const opt = document.createElement('option'); opt.value=r; opt.textContent=r;
-      if((u.role||'PENDING') === r) opt.selected = true;
-      select.appendChild(opt);
+  try {
+    const snap = await db.ref('users').get();
+    const users = snap.val() || {};
+    const wrap = $('#userList'); wrap.innerHTML = '';
+    const entries = Object.entries(users);
+    if(entries.length === 0){ wrap.innerHTML = '<div class="empty-state"><div class="ic">👤</div>Belum ada pengguna.</div>'; return; }
+    entries.forEach(([uid, u]) => {
+      const row = document.createElement('div');
+      row.className = 'list-card';
+      row.innerHTML = `<div class="lc-main"><div class="lc-title">${u.name || u.email}</div><div class="lc-sub">${u.email||''}</div></div>`;
+      const select = document.createElement('select');
+      select.className = 'role-select';
+      ['PENDING','CASHIER','ADMIN'].forEach(r => {
+        const opt = document.createElement('option'); opt.value=r; opt.textContent=r;
+        if((u.role||'PENDING') === r) opt.selected = true;
+        select.appendChild(opt);
+      });
+      select.addEventListener('change', ()=>{
+        db.ref('users/'+uid).update({ role: select.value });
+        toast('Peran diperbarui');
+      });
+      row.appendChild(select);
+      wrap.appendChild(row);
     });
-    select.addEventListener('change', ()=>{
-      db.ref('users/'+uid).update({ role: select.value });
-      toast('Peran diperbarui');
-    });
-    row.appendChild(select);
-    wrap.appendChild(row);
-  });
+  } catch(error) {
+    toast('Gagal memuat pengguna: ' + error.message);
+  }
 }
 
 /* ---------- Settings (admin) ---------- */
-db.ref('organizations/main/profile/name').on('value', s => {
-  const name = s.val() || 'Kasir & Keuangan';
-  $('#orgName').textContent = name;
-  $('#settOrgName').value = name;
-});
+if(db) {
+  db.ref('organizations/main/profile/name').on('value', s => {
+    const name = s.val() || 'Kasir & Keuangan';
+    $('#orgName').textContent = name;
+    $('#settOrgName').value = name;
+  });
+}
+
 $('#saveSettBtn').addEventListener('click', async ()=>{
   const name = $('#settOrgName').value.trim() || 'Kasir & Keuangan';
-  await db.ref('organizations/main/profile/name').set(name);
-  toast('Pengaturan disimpan');
+  try {
+    await db.ref('organizations/main/profile/name').set(name);
+    toast('Pengaturan disimpan');
+  } catch(error) {
+    toast('Gagal menyimpan: ' + error.message);
+  }
 });
 
 /* Prevent accidental page unload while a shift/cart is active */
