@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bimbel Ceria</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--p:#2563eb;--p2:#1d4ed8;--bg:#eff6ff;--soft:#dbeafe;--ink:#1e293b;--mut:#64748b;--line:#e2e8f0;--ok:#16a34a;--warn:#f59e0b}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Nunito',system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select{font:inherit}
+.hidden{display:none!important}
+.in{animation:in .35s ease}
+@keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card{background:#fff;border-radius:20px;padding:22px;box-shadow:0 4px 18px rgba(37,99,235,.08);border:1px solid var(--line)}
+.btn{border:0;border-radius:12px;padding:11px 18px;font-weight:800;cursor:pointer;background:var(--p);color:#fff;transition:.2s}
+.btn:hover{background:var(--p2);transform:translateY(-1px)}
+.btn.ghost{background:var(--soft);color:var(--p)}.btn.ghost:hover{background:#bfdbfe}
+.btn.full{width:100%}
+label{display:block;font-weight:700;font-size:.85rem;margin:14px 0 5px}
+input,select{width:100%;padding:11px 13px;border:2px solid var(--line);border-radius:12px;background:#fff;outline:0}
+input:focus,select:focus{border-color:var(--p)}
+#login{min-height:100vh;display:grid;place-items:center;padding:18px}
+#login .card{width:100%;max-width:420px;text-align:center}
+#login h1{margin:6px 0 2px;color:var(--p)}
+#login p{color:var(--mut);margin:0 0 10px}
+.sep{color:var(--mut);font-size:.8rem;margin:18px 0 4px;display:flex;align-items:center;gap:10px}
+.sep:before,.sep:after{content:"";flex:1;height:1px;background:var(--line)}
+.stack{display:grid;gap:10px;margin-top:12px}
+header{background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+.brand{font-weight:800;color:var(--p);font-size:1.2rem}
+.who{display:flex;align-items:center;gap:12px;font-weight:700}
+main{max-width:980px;margin:0 auto;padding:20px 16px 40px}
+.tabs{display:flex;gap:6px;background:#fff;padding:6px;border-radius:14px;border:1px solid var(--line);margin-bottom:18px;width:fit-content;max-width:100%;overflow-x:auto}
+.tab{border:0;background:none;padding:10px 18px;border-radius:10px;font-weight:800;color:var(--mut);cursor:pointer;white-space:nowrap;transition:.2s}
+.tab.on{background:var(--p);color:#fff}
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cal-head h2{margin:0;font-size:1.15rem;text-transform:capitalize}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.dow{text-align:center;font-size:.75rem;font-weight:800;color:var(--mut);padding:4px 0}
+.day{aspect-ratio:1;border:2px solid transparent;border-radius:12px;background:#f8fafc;cursor:pointer;font-weight:700;position:relative;padding:0;color:var(--ink);transition:.15s}
+.day:hover{border-color:var(--p)}
+.day.has{background:var(--soft);color:var(--p2)}
+.day.has:after{content:"";position:absolute;bottom:6px;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--p)}
+.day.today{box-shadow:inset 0 0 0 2px var(--warn)}
+.day.sel{background:var(--p);color:#fff;border-color:var(--p)}
+.day.sel:after{background:#fff}
+.day.blank{visibility:hidden}
+.detail{margin-top:18px}
+.detail h3{margin:0 0 10px;font-size:1rem}
+.cls{display:flex;gap:14px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:var(--bg);margin-top:8px;border-left:5px solid var(--p)}
+.cls .t{font-weight:800;color:var(--p);min-width:104px}
+.cls small{display:block;color:var(--mut)}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.item{border-top:5px solid var(--p);padding:16px}
+.item .hari{font-size:.75rem;font-weight:800;color:var(--p);background:var(--soft);display:inline-block;padding:3px 10px;border-radius:99px}
+.item h3{margin:10px 0 4px}
+.item p{margin:2px 0;color:var(--mut);font-size:.9rem}
+.empty{text-align:center;color:var(--mut);padding:26px}
+.row{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end}
+@media(max-width:640px){.row{grid-template-columns:1fr}.cls{flex-direction:column;gap:4px}.day{border-radius:9px;font-size:.85rem}}
+.wrap{overflow-x:auto;margin-top:8px}
+table{width:100%;border-collapse:collapse}
+th{background:var(--soft);color:var(--p2);text-align:left;font-size:.8rem;padding:10px}
+td{padding:10px;border-top:1px solid var(--line)}
+h2.sec{margin:26px 0 4px;font-size:1.1rem}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,30px);background:var(--ink);color:#fff;padding:12px 22px;border-radius:99px;font-weight:700;opacity:0;pointer-events:none;transition:.3s;z-index:20;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast.ok{background:var(--ok)}#toast.err{background:#dc2626}
+</style>
+</head>
+<body>
+
+<section id="login">
+  <div class="card in">
+    <div style="font-size:2.6rem">🎒</div>
+    <h1>Bimbel Ceria</h1>
+    <p>Belajar jadi lebih seru!</p>
+    <label style="text-align:left">Masuk sebagai siswa</label>
+    <select id="selSiswa"></select>
+    <div class="stack">
+      <button class="btn full" id="btnSiswa">Login sebagai Siswa</button>
+      <button class="btn ghost full" id="btnAdmin">Login sebagai Admin</button>
+    </div>
+    <div class="sep">atau daftar baru</div>
+    <input id="inNama" placeholder="Nama lengkap siswa">
+    <button class="btn ghost full" style="margin-top:10px" id="btnDaftar">Daftar</button>
+  </div>
+</section>
+
+<section id="student" class="hidden">
+  <header><div class="brand">🎒 Bimbel Ceria</div><div class="who"><span id="sName"></span><button class="btn ghost" data-logout>Logout</button></div></header>
+  <main>
+    <div class="tabs" id="sTabs"><button class="tab on" data-p="pCal">📅 Kalender Jadwal</button><button class="tab" data-p="pList">📚 Jadwal Paket Kelas</button></div>
+    <div id="pCal" class="panel in">
+      <div class="card">
+        <div class="cal-head"><button class="btn ghost" id="prev">‹</button><h2 id="calTitle"></h2><button class="btn ghost" id="next">›</button></div>
+        <div class="grid" id="calGrid"></div>
+        <div class="detail" id="detail"></div>
+      </div>
+    </div>
+    <div id="pList" class="panel hidden"><div class="list" id="listBox"></div></div>
+  </main>
+</section>
+
+<section id="admin" class="hidden">
+  <header><div class="brand">🎒 Bimbel Ceria · Admin</div><div class="who"><span>Admin</span><button class="btn ghost" data-logout>Logout</button></div></header>
+  <main class="in">
+    <div class="card">
+      <h2 style="margin:0">Penugasan Kelas Siswa</h2>
+      <form id="form" class="row">
+        <div><label>Pilih Siswa</label><select id="aSiswa"></select></div>
+        <div><label>Pilih Paket Kelas</label><select id="aPaket"></select></div>
+        <button class="btn">Simpan / Masukkan ke Kelas</button>
+      </form>
+    </div>
+    <h2 class="sec">Riwayat Pendaftaran</h2>
+    <div class="card wrap"><table><thead><tr><th>#</th><th>Siswa</th><th>Paket</th></tr></thead><tbody id="hist"></tbody></table></div>
+  </main>
+</section>
+
+<div id="toast"></div>
+
+<script>
+/* ===== Mock Database ===== */
+const db = {
+  users: [
+    { id: 1, nama: "Admin Bimbel", role: "admin" },
+    { id: 2, nama: "Rani Putri", role: "siswa" },
+    { id: 3, nama: "Dimas Pratama", role: "siswa" },
+    { id: 4, nama: "Salsa Aulia", role: "siswa" }
+  ],
+  paket_kelas: [
+    { id: 1, nama_paket: "Calistung Ceria (SD 1-3)" },
+    { id: 2, nama_paket: "Matematika & IPA (SD 4-6)" },
+    { id: 3, nama_paket: "English for Kids" }
+  ],
+  jadwal_kelas: [
+    { id: 1, paket_id: 1, mapel: "Membaca", pengajar: "Bu Rina", hari: "Senin", waktu: "15:00 - 16:00", lokasi: "Ruang A" },
+    { id: 2, paket_id: 1, mapel: "Berhitung", pengajar: "Pak Deni", hari: "Rabu", waktu: "15:00 - 16:00", lokasi: "Ruang A" },
+    { id: 3, paket_id: 2, mapel: "Matematika", pengajar: "Pak Budi", hari: "Selasa", waktu: "16:00 - 17:30", lokasi: "meet.google.com/abc-defg-hij" },
+    { id: 4, paket_id: 2, mapel: "IPA", pengajar: "Bu Sari", hari: "Kamis", waktu: "16:00 - 17:30", lokasi: "meet.google.com/klm-nopq-rst" },
+    { id: 5, paket_id: 3, mapel: "Speaking", pengajar: "Miss Anna", hari: "Jumat", waktu: "14:00 - 15:00", lokasi: "Ruang B" },
+    { id: 6, paket_id: 3, mapel: "Vocabulary Games", pengajar: "Miss Anna", hari: "Sabtu", waktu: "09:00 - 10:30", lokasi: "meet.google.com/uvw-xyza-bcd" }
+  ],
+  pendaftaran: [
+    { id: 1, user_id: 2, paket_id: 1 },
+    { id: 2, user_id: 2, paket_id: 3 },
+    { id: 3, user_id: 3, paket_id: 2 }
+  ]
+};
+
+const $ = id => document.getElementById(id);
+const HARI = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+const ORDER = d => (HARI.indexOf(d) + 6) % 7; // Senin dulu
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nextId = arr => arr.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+let me = null, cursor = new Date(), selected = null;
+cursor.setDate(1);
+
+function toast(msg, type = "ok") {
+  const t = $("toast"); t.textContent = msg; t.className = "show " + type;
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.className = "", 2800);
+}
+function go(id) {
+  ["login", "student", "admin"].forEach(s => $(s).classList.add("hidden"));
+  const el = $(id); el.classList.remove("hidden");
+  el.classList.remove("in"); void el.offsetWidth; el.classList.add("in");
+  window.scrollTo(0, 0);
+}
+
+/* ===== Login / Daftar / Logout ===== */
+function fillSiswa() {
+  const s = db.users.filter(u => u.role === "siswa");
+  const opts = s.map(u => `<option value="${u.id}">${esc(u.nama)}</option>`).join("");
+  $("selSiswa").innerHTML = opts; $("aSiswa").innerHTML = opts;
+  $("aPaket").innerHTML = db.paket_kelas.map(p => `<option value="${p.id}">${esc(p.nama_paket)}</option>`).join("");
+}
+$("btnSiswa").onclick = () => enterStudent(db.users.find(u => u.id == $("selSiswa").value));
+$("btnAdmin").onclick = () => { me = db.users.find(u => u.role === "admin"); renderHist(); go("admin"); };
+$("btnDaftar").onclick = () => {
+  const nama = $("inNama").value.trim();
+  if (!nama) return toast("Isi nama lengkap dulu ya", "err");
+  const u = { id: nextId(db.users), nama, role: "siswa" };
+  db.users.push(u); fillSiswa(); $("inNama").value = "";
+  toast("Pendaftaran berhasil, selamat datang " + nama + "! 🎉");
+  enterStudent(u);
+};
+document.querySelectorAll("[data-logout]").forEach(b => b.onclick = () => { me = null; fillSiswa(); go("login"); });
+
+/* ===== Siswa ===== */
+function myJadwal() {
+  const ids = db.pendaftaran.filter(p => p.user_id === me.id).map(p => p.paket_id);
+  return db.jadwal_kelas.filter(j => ids.includes(j.paket_id));
+}
+function enterStudent(u) {
+  me = u; selected = new Date(); cursor = new Date(); cursor.setDate(1);
+  $("sName").textContent = "👋 " + u.nama;
+  switchTab("pCal", true); renderCal(); showDetail(selected); renderList(); go("student");
+}
+function switchTab(pid, silent) {
+  document.querySelectorAll("#sTabs .tab").forEach(t => t.classList.toggle("on", t.dataset.p === pid));
+  document.querySelectorAll(".panel").forEach(p => {
+    const on = p.id === pid; p.classList.toggle("hidden", !on);
+    if (on) { p.classList.remove("in"); void p.offsetWidth; p.classList.add("in"); }
+  });
+}
+$("sTabs").onclick = e => { const t = e.target.closest(".tab"); if (t) switchTab(t.dataset.p); };
+
+const sameDay = (a, b) => a && b && a.toDateString() === b.toDateString();
+function renderCal() {
+  const y = cursor.getFullYear(), m = cursor.getMonth(), jd = myJadwal();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  $("calTitle").textContent = cursor.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+  let h = ["Min","Sen","Sel","Rab","Kam","Jum","Sab"].map(d => `<div class="dow">${d}</div>`).join("");
+  for (let i = 0; i < cursor.getDay(); i++) h += '<button class="day blank" tabindex="-1"></button>';
+  const last = new Date(y, m + 1, 0).getDate();
+  for (let d = 1; d <= last; d++) {
+    const dt = new Date(y, m, d), cls = jd.filter(j => j.hari === HARI[dt.getDay()]);
+    const has = dt >= today && cls.length;
+    const c = ["day", has ? "has" : "", sameDay(dt, today) ? "today" : "", sameDay(dt, selected) ? "sel" : ""].join(" ");
+    h += `<button class="${c}" data-d="${d}" ${has ? `title="${cls.map(j => j.mapel + " " + j.waktu).join(", ")}"` : ""}>${d}</button>`;
+  }
+  $("calGrid").innerHTML = h;
+}
+function showDetail(dt) {
+  selected = dt;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const cls = dt >= today ? myJadwal().filter(j => j.hari === HARI[dt.getDay()]).sort((a, b) => a.waktu.localeCompare(b.waktu)) : [];
+  const tgl = dt.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  $("detail").innerHTML = `<h3>${tgl}</h3>` + (cls.length
+    ? cls.map(j => `<div class="cls"><div class="t">🕒 ${esc(j.waktu)}</div><div><b>${esc(j.mapel)}</b><small>${esc(j.pengajar)} · 📍 ${esc(j.lokasi)}</small></div></div>`).join("")
+    : '<div class="empty" style="padding:14px">Tidak ada kelas di tanggal ini 🎈</div>');
+  document.querySelectorAll(".day").forEach(b => b.classList.toggle("sel", b.dataset.d && sameDay(new Date(cursor.getFullYear(), cursor.getMonth(), +b.dataset.d), dt)));
+}
+const pick = e => { const b = e.target.closest(".day[data-d]"); if (b) showDetail(new Date(cursor.getFullYear(), cursor.getMonth(), +b.dataset.d)); };
+$("calGrid").onclick = pick;
+$("calGrid").onmouseover = pick;
+$("prev").onclick = () => { cursor.setMonth(cursor.getMonth() - 1); renderCal(); };
+$("next").onclick = () => { cursor.setMonth(cursor.getMonth() + 1); renderCal(); };
+
+function renderList() {
+  const jd = myJadwal().sort((a, b) => ORDER(a.hari) - ORDER(b.hari) || a.waktu.localeCompare(b.waktu));
+  $("listBox").innerHTML = jd.length ? jd.map(j => {
+    const p = db.paket_kelas.find(x => x.id === j.paket_id);
+    return `<div class="card item"><span class="hari">${j.hari}</span><h3>${esc(j.mapel)}</h3><p>🕒 ${esc(j.waktu)}</p><p>👩‍🏫 ${esc(j.pengajar)}</p><p>📍 ${esc(j.lokasi)}</p><p>📦 ${esc(p.nama_paket)}</p></div>`;
+  }).join("") : '<div class="card empty" style="grid-column:1/-1">Belum ada paket kelas. Hubungi admin ya! 📞</div>';
+}
+
+/* ===== Admin ===== */
+function renderHist() {
+  $("hist").innerHTML = db.pendaftaran.length ? db.pendaftaran.map((p, i) => {
+    const u = db.users.find(x => x.id === p.user_id), k = db.paket_kelas.find(x => x.id === p.paket_id);
+    return `<tr><td>${i + 1}</td><td>${esc(u.nama)}</td><td>${esc(k.nama_paket)}</td></tr>`;
+  }).reverse().join("") : '<tr><td colspan="3" class="empty">Belum ada data</td></tr>';
+}
+$("form").onsubmit = e => {
+  e.preventDefault();
+  const uid = +$("aSiswa").value, pid = +$("aPaket").value;
+  const u = db.users.find(x => x.id === uid), k = db.paket_kelas.find(x => x.id === pid);
+  if (!u) return toast("Belum ada siswa terdaftar", "err");
+  if (db.pendaftaran.some(p => p.user_id === uid && p.paket_id === pid)) return toast(`${u.nama} sudah ada di paket ini`, "err");
+  db.pendaftaran.push({ id: nextId(db.pendaftaran), user_id: uid, paket_id: pid });
+  renderHist(); toast(`✅ ${u.nama} berhasil dimasukkan ke ${k.nama_paket}`);
+};
+
+fillSiswa();
+</script>
+</body>
+</html>
